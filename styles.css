@@ -184,8 +184,6 @@ a{color:inherit;text-decoration:none}
   color:#fff;padding:50px 46px;display:flex;flex-direction:column;justify-content:space-between;
   position:relative;overflow:hidden;
 }
-.login-left::before{content:"";position:absolute;width:240px;height:240px;border-radius:50%;background:rgba(255,255,255,.14);top:-60px;right:-50px}
-.login-left::after{content:"";position:absolute;width:170px;height:170px;border-radius:50%;background:rgba(255,255,255,.10);bottom:30px;left:-40px}
 .login-left h1,.login-left h2{position:relative;z-index:1}
 .login-left p{position:relative;z-index:1}
 .brand{display:flex;align-items:center;gap:13px;margin-bottom:auto;position:relative;z-index:1}
@@ -193,8 +191,8 @@ a{color:inherit;text-decoration:none}
 .b-sub{font-size:12px;color:rgba(255,255,255,.85);margin-top:3px;letter-spacing:.5px}
 .login-left h1{font-family:var(--font-serif);font-size:30px;font-weight:800;line-height:1.5;letter-spacing:1px}
 .login-left p{opacity:.92;font-size:14px;line-height:1.8;letter-spacing:.3px}
-.b-tags{display:flex;flex-wrap:wrap;gap:9px;margin-top:auto;position:relative;z-index:1}
-.b-tags > span{background:rgba(255,255,255,.2);padding:7px 14px;border-radius:999px;font-size:12px;backdrop-filter:blur(4px);display:inline-flex;align-items:center;gap:6px}
+.b-tags{display:flex;flex-wrap:nowrap;gap:8px;margin-top:auto;position:relative;z-index:1}
+.b-tags > span{background:rgba(255,255,255,.2);padding:6px 12px;border-radius:999px;font-size:12px;backdrop-filter:blur(4px);display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 
 .login-right{flex:1;padding:50px 46px;display:flex;flex-direction:column;justify-content:center;background:rgba(255,255,255,.5)}
 .login-right h2{font-family:var(--font-serif);font-size:24px;font-weight:800;margin-bottom:6px;letter-spacing:.5px}
@@ -452,6 +450,10 @@ option{padding:6px}
   .stat-grid,.course-grid,.signin-grid{grid-template-columns:1fr}
   .login-card{flex-direction:column}
   .login-left{padding:34px 28px}
+  .login-right{padding:28px 24px}
+  .login-left h1{font-size:24px}
+  .b-tags{flex-wrap:wrap}
+  .b-tags > span{padding:5px 10px;font-size:11px}
 }
 
 /* ===================== 新增：图标/表单/通知/面包屑/真实感 ===================== */
@@ -506,4 +508,88 @@ option{padding:6px}
 
 /* 课程封面：学科色块 + 首字母（替代 emoji） */
 .course-cover{font-family:var(--font-serif);font-size:40px;font-weight:800;color:#fff;letter-spacing:1px}
+
+/* =========================================================
+   新增：页面缓存、学习页增强、AI 助手、看板工具提示
+   ========================================================= */
+
+/* SPA 页面缓存 */
+.page{animation:fadeUp .35s cubic-bezier(.22,1,.36,1)}
+
+/* 登录框 remember 说明 */
+.remember input{margin:0}
+
+/* 资料下载与在线预览 */
+.doc-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 0;border-bottom:1px solid var(--border)}
+.doc-row:last-child{border-bottom:none}
+.doc-info{flex:1;min-width:0;display:flex;align-items:center;gap:13px}
+.doc-actions{display:flex;gap:8px;flex-shrink:0}
+.doc-actions .btn{padding:7px 14px;font-size:12px}
+
+/* 视频推荐 */
+.video-recs{margin-top:16px;padding:16px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.rec-title{font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px}
+.rec-list{display:flex;flex-direction:column;gap:8px}
+.rec-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:12px;font-size:13px;color:var(--text);transition:.2s}
+.rec-item:hover{border-color:var(--primary);box-shadow:var(--shadow-sm)}
+.rec-item .ic{flex-shrink:0;color:var(--primary-deep)}
+.rec-item span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rec-src{font-size:11px;color:var(--text-3);flex:0 0 auto;background:var(--bg-2);padding:2px 8px;border-radius:999px}
+
+/* 章节测验 */
+.quiz-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px;box-shadow:var(--shadow-sm)}
+.quiz-head{font-size:16px;font-weight:800;margin-bottom:12px}
+.quiz-score{font-size:14px;color:var(--success);font-weight:700;margin-bottom:10px}
+.quiz-q{margin-bottom:16px}
+.quiz-qq{display:flex;align-items:flex-start;gap:8px;font-size:14px;font-weight:700;margin-bottom:10px;line-height:1.5}
+.quiz-no{flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--primary-soft);color:var(--primary-deep);font-size:11px}
+.quiz-opts{display:flex;flex-direction:column;gap:8px;padding-left:30px}
+.quiz-opt{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2);cursor:pointer}
+.quiz-opt input{accent-color:var(--primary-deep);cursor:pointer}
+.quiz-opt:hover{color:var(--text)}
+
+/* 讨论区 AI 助教标识 */
+.badge-ai{background:linear-gradient(135deg,var(--ai-soft),var(--accent-soft));color:#6B5BD8;font-weight:700;padding:1px 7px;border-radius:20px;font-size:10px}
+
+/* 学情看板 */
+.dash-todo{margin-bottom:20px}
+.h-title2{font-size:15px;font-weight:800;margin:0 0 12px;font-family:var(--font-serif)}
+.todo-list{display:flex;flex-direction:column;gap:8px}
+.todo-row{display:flex;align-items:center;gap:10px;padding:11px 14px;background:var(--surface-2);border:1px solid var(--border);border-radius:12px;font-size:13px}
+.todo-row .ic{flex-shrink:0;color:var(--primary-deep)}
+.todo-row span{flex:1;min-width:0}
+.todo-row .btn{padding:5px 12px;font-size:11px}
+.todo-empty{padding:20px;text-align:center;color:var(--text-3);font-size:13px}
+.dash-progress{margin-bottom:20px}
+.dash-progress .hbar{margin-bottom:10px}
+
+/* 统计卡片提示 */
+.stat{position:relative}
+.stat-tip{position:absolute;top:12px;right:12px;width:18px;height:18px;border-radius:50%;background:var(--bg-2);color:var(--text-3);font-size:11px;display:flex;align-items:center;justify-content:center;cursor:help}
+.stat-tip::after{content:attr(data-tip);position:absolute;right:0;top:26px;width:220px;background:rgba(74,69,64,.92);color:#fff;font-size:11px;line-height:1.5;padding:10px 12px;border-radius:10px;z-index:10;opacity:0;pointer-events:none;transition:.2s;white-space:normal;text-align:left;font-weight:500}
+.stat-tip:hover::after{opacity:1}
+
+/* 悬浮 AI 助手 */
+.ai-fab{position:fixed;right:24px;bottom:24px;width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--ai),#8975EE);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 24px rgba(169,156,245,.45);z-index:70;transition:.25s}
+.ai-fab:hover{transform:scale(1.08)}
+.ai-fab svg{width:26px;height:26px}
+.ai-drawer{position:fixed;right:20px;bottom:88px;width:360px;max-width:88vw;height:460px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);z-index:70;display:none;flex-direction:column;overflow:hidden}
+.ai-drawer.show{display:flex;animation:fadeUp .25s ease}
+.ai-drawer-head{padding:14px 16px;background:linear-gradient(120deg,var(--ai-soft),var(--accent-soft));display:flex;align-items:center;gap:10px;font-size:14px}
+.ai-drawer-head .ic{color:var(--primary-deep)}
+.ai-close{margin-left:auto;cursor:pointer;color:var(--text-3);font-size:16px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;border-radius:50%}
+.ai-close:hover{background:var(--surface-2)}
+.ai-drawer-msgs{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:12px;background:var(--surface-2)}
+.ai-msg{max-width:82%;padding:11px 14px;border-radius:14px;font-size:13px;line-height:1.55;animation:fadeUp .3s ease}
+.ai-msg.ai{background:var(--ai-soft);align-self:flex-start;border-bottom-left-radius:4px}
+.ai-msg.me{background:linear-gradient(135deg,var(--primary),var(--primary-deep));color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.ai-drawer-input{display:flex;gap:8px;padding:12px;border-top:1px solid var(--border)}
+.ai-drawer-input input{flex:1;border:1px solid var(--border-2);border-radius:12px;padding:10px 12px;outline:none;font-size:13px;background:var(--surface-2)}
+.ai-drawer-input input:focus{border-color:var(--ai)}
+.ai-drawer-input .btn{padding:9px 14px;font-size:12px}
+
+@media(max-width:680px){
+  .ai-drawer{right:10px;bottom:80px;height:420px}
+  .ai-fab{right:16px;bottom:16px;width:48px;height:48px}
+}
 

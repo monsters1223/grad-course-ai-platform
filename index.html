@@ -42,7 +42,7 @@
             <span class="eye" id="eyeBtn" data-icon="eye" onclick="togglePwd()"></span>
           </div>
         </div>
-        <label class="remember"><input type="checkbox" id="li-remember" /> 记住此账号</label>
+        <label class="remember" title="勾选后，关闭页面再打开会自动进入学习空间"><input type="checkbox" id="li-remember" checked /> 保持登录状态（下次自动进入）</label>
         <button class="btn" style="width:100%;margin-top:6px" onclick="doLogin()">登录进入</button>
         <p id="li-err" class="muted" style="color:var(--danger);min-height:18px;font-size:12px;margin-top:8px"></p>
         <p class="muted" style="font-size:12px;margin-top:10px;text-align:right">
@@ -50,6 +50,9 @@
         </p>
         <p class="muted" style="font-size:12px;margin-top:6px;text-align:center">
           还没有账号？<span class="link" onclick="showRegister()">立即注册</span>
+        </p>
+        <p class="muted" style="font-size:11px;margin-top:12px;text-align:center;line-height:1.5;color:var(--text-3)">
+          静态演示版说明：注册信息保存在当前浏览器，<br>换设备或清空缓存后需重新注册。
         </p>
       </div>
 

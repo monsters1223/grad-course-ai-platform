@@ -14,7 +14,7 @@ const USERS = [
 // AI 互动课堂（多智能体）真实链接
 const AI_CLASSROOM_URL = "https://open.maic.chat/classroom/GEFSFOgzV6";
 
-// 推荐教学视频（按课程）
+// 课程级默认推荐视频（当章节没有单独配置 recs 时作为兜底）
 const VIDEO_LINKS = {
   1: [
     { title: "学术写作入门：如何提出研究问题", url: "https://search.bilibili.com/all?keyword=学术写作%20研究问题", source: "Bilibili" },
@@ -45,9 +45,18 @@ const COURSES = [
     desc: "面向研究生的学术写作训练，涵盖文献综述、引用规范与论证结构。",
     progress: 35,
     sections: [
-      { stype: "video", title: "第1章 文献检索与综述", content: "assets/ch1.mp4" },
-      { stype: "video", title: "第2章 引用格式与学术诚信", content: "assets/ch2.mp4" },
-      { stype: "video", title: "第3章 论证结构与逻辑", content: "assets/eth1.mp4" },
+      { stype: "video", title: "第1章 文献检索与综述", content: "assets/ch1.mp4", recs: [
+        { title: "文献检索技巧：从知网到 Web of Science", url: "https://search.bilibili.com/all?keyword=文献检索%20知网%20Web%20of%20Science", source: "Bilibili" },
+        { title: "如何快速判断一篇论文是否值得读", url: "https://search.bilibili.com/all?keyword=如何判断论文是否值得读", source: "Bilibili" },
+      ]},
+      { stype: "video", title: "第2章 引用格式与学术诚信", content: "assets/ch2.mp4", recs: [
+        { title: "GB/T 7714 参考文献格式详解", url: "https://search.bilibili.com/all?keyword=GB%2FT%207714%20参考文献", source: "Bilibili" },
+        { title: "学术诚信与论文查重原理", url: "https://search.bilibili.com/all?keyword=学术诚信%20论文查重", source: "Bilibili" },
+      ]},
+      { stype: "video", title: "第3章 论证结构与逻辑", content: "assets/eth1.mp4", recs: [
+        { title: "学术论文的论证结构：IMRAD 模式", url: "https://search.bilibili.com/all?keyword=学术论文%20IMRAD%20论证结构", source: "Bilibili" },
+        { title: "批判性思维与逻辑谬误", url: "https://search.bilibili.com/all?keyword=批判性思维%20逻辑谬误", source: "Bilibili" },
+      ]},
       { stype: "doc", title: "第1章课件·文献检索", content: "assets/slide1.html" },
       { stype: "doc", title: "第2章课件·引用规范", content: "assets/slide2.html" },
       { stype: "doc", title: "第3章课件·论证结构", content: "assets/slide3.html" },
@@ -96,8 +105,14 @@ const COURSES = [
     desc: "从数据思维到机器学习基础，建立跨学科的数据分析能力。",
     progress: 0,
     sections: [
-      { stype: "video", title: "第1章 数据思维与问题定义", content: "assets/ch1.mp4" },
-      { stype: "video", title: "第2章 探索性数据分析", content: "assets/ch2.mp4" },
+      { stype: "video", title: "第1章 数据思维与问题定义", content: "assets/ch1.mp4", recs: [
+        { title: "什么是数据思维：从业务问题到数据问题", url: "https://search.bilibili.com/all?keyword=数据思维%20业务问题", source: "Bilibili" },
+        { title: "数据科学项目流程全解析", url: "https://search.bilibili.com/all?keyword=数据科学项目流程", source: "Bilibili" },
+      ]},
+      { stype: "video", title: "第2章 探索性数据分析", content: "assets/ch2.mp4", recs: [
+        { title: "EDA 探索性数据分析实战（Python）", url: "https://search.bilibili.com/all?keyword=EDA%20探索性数据分析%20Python", source: "Bilibili" },
+        { title: "数据清洗与特征工程入门", url: "https://search.bilibili.com/all?keyword=数据清洗%20特征工程", source: "Bilibili" },
+      ]},
       { stype: "doc", title: "第1章课件·数据思维", content: "assets/slide1.html" },
       { stype: "quiz", title: "章节测验 1", questions: [
         { q: "数据科学的核心目标是什么？", options: ["收集最多数据", "从数据中提取洞见并支持决策", "制作精美图表", "编写最多代码"], answer: 1, explanation: "数据科学的核心是从数据中提取洞见并支持决策。" },
@@ -131,7 +146,10 @@ const COURSES = [
     desc: "从真实工程事故出发，理解工程师的伦理责任与决策框架。",
     progress: 60,
     sections: [
-      { stype: "video", title: "第1章 工程伦理导论", content: "assets/ch1.mp4" },
+      { stype: "video", title: "第1章 工程伦理导论", content: "assets/ch1.mp4", recs: [
+        { title: "工程伦理导论：公众安全与职业责任", url: "https://search.bilibili.com/all?keyword=工程伦理%20公众安全%20职业责任", source: "Bilibili" },
+        { title: "工程师伦理准则与职业行为规范", url: "https://search.bilibili.com/all?keyword=工程师%20伦理准则", source: "Bilibili" },
+      ]},
       { stype: "doc", title: "第1章课件·伦理决策框架", content: "assets/slide1.html" },
       { stype: "quiz", title: "章节测验 1", questions: [
         { q: "工程师的首要责任对象通常是？", options: ["雇主利益", "公众安全与健康", "个人声誉", "项目利润"], answer: 1, explanation: "工程伦理强调公众安全与健康优先。" },

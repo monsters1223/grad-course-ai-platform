@@ -268,8 +268,13 @@ a{color:inherit;text-decoration:none}
 .agent h4{font-size:14px;font-weight:800}
 .agent p{font-size:12px;color:var(--text-2);margin-top:5px}
 
-.chat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);height:360px;display:flex;flex-direction:column;box-shadow:var(--shadow-sm);overflow:hidden}
+.chat-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);height:360px;display:flex;flex-direction:column;box-shadow:var(--shadow-sm);overflow:hidden;transition:.25s}
+.chat-box.collapsed{height:auto}
 .chat-head{padding:15px 18px;border-bottom:1px solid var(--border);font-weight:800;display:flex;align-items:center;gap:9px;background:linear-gradient(120deg,var(--ai-soft),var(--accent-soft));font-family:var(--font-serif)}
+.chat-head-toggle{justify-content:space-between;cursor:pointer}
+.chat-toggle{background:transparent;border:none;color:var(--text-2);font-size:12px;font-weight:700;padding:4px 8px;border-radius:8px;cursor:pointer;transition:.2s}
+.chat-toggle:hover{background:rgba(255,255,255,.5);color:var(--text)}
+.chat-body{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .chat-msgs{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:13px;background:var(--surface-2)}
 .msg{max-width:78%;padding:12px 15px;border-radius:16px;font-size:13px;line-height:1.6;animation:fadeUp .3s ease}
 .msg.ai{background:var(--ai-soft);align-self:flex-start;border-bottom-left-radius:5px}
@@ -509,6 +514,9 @@ option{padding:6px}
 /* 课程封面：学科色块 + 首字母（替代 emoji） */
 .course-cover{font-family:var(--font-serif);font-size:40px;font-weight:800;color:#fff;letter-spacing:1px}
 
+/* 搜索结果高亮 */
+.course-body h4 mark{background:linear-gradient(120deg,var(--accent-soft),#FFF3CD);color:var(--text);padding:0 2px;border-radius:4px;font-weight:800}
+
 /* =========================================================
    新增：页面缓存、学习页增强、AI 助手、看板工具提示
    ========================================================= */
@@ -547,6 +555,28 @@ option{padding:6px}
 .quiz-opt{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2);cursor:pointer}
 .quiz-opt input{accent-color:var(--primary-deep);cursor:pointer}
 .quiz-opt:hover{color:var(--text)}
+
+/* 测验结果解析 */
+.quiz-summary{display:flex;align-items:center;gap:16px;margin-bottom:18px;padding:14px;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.quiz-score-circle{width:64px;height:64px;border-radius:50%;background:conic-gradient(var(--success) 0 var(--pct,72%),var(--bg-2) var(--pct,72%) 100%);display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0}
+.quiz-score-circle::after{content:"";position:absolute;width:48px;height:48px;border-radius:50%;background:var(--surface)}
+.quiz-score-circle span{position:relative;z-index:1;font-weight:800;font-size:15px;color:var(--text)}
+.quiz-score-num{font-size:16px;font-weight:800;color:var(--text)}
+.quiz-score-time{font-size:12px;color:var(--text-3);margin-top:2px}
+.quiz-review{padding:14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface)}
+.quiz-review.correct{border-left:4px solid var(--success);background:#F4FBF8}
+.quiz-review.wrong{border-left:4px solid var(--danger);background:#FDF6F6}
+.quiz-status{font-size:12px;font-weight:700;margin:-4px 0 10px 30px}
+.quiz-review.correct .quiz-status{color:var(--success)}
+.quiz-review.wrong .quiz-status{color:var(--danger)}
+.quiz-opt-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;font-size:13px;color:var(--text-2);background:var(--surface-2);border:1px solid transparent}
+.quiz-opt-row .quiz-opt-letter{width:22px;height:22px;border-radius:50%;background:var(--bg-2);color:var(--text-3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0}
+.quiz-opt-row.right{background:#E7F7EF;border-color:var(--success);color:#2E9E6B}
+.quiz-opt-row.right .quiz-opt-letter{background:var(--success);color:#fff}
+.quiz-opt-row.picked-wrong{background:#FDE7E7;border-color:var(--danger);color:#C75B5B}
+.quiz-opt-row.picked-wrong .quiz-opt-letter{background:var(--danger);color:#fff}
+.quiz-exp{margin:10px 0 0 30px;padding:10px 12px;background:#FEF9E7;border-radius:10px;font-size:12px;color:var(--text-2);line-height:1.6}
+.quiz-exp b{color:var(--text);font-weight:700}
 
 /* 讨论区 AI 助教标识 */
 .badge-ai{background:linear-gradient(135deg,var(--ai-soft),var(--accent-soft));color:#6B5BD8;font-weight:700;padding:1px 7px;border-radius:20px;font-size:10px}

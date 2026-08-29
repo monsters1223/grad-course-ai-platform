@@ -63,7 +63,7 @@ function doLogin() {
   }
   const prof = getProfile(u);
   currentUser = { username: user.username, name: prof.name || user.name || user.username, sid: user.studentId || user.username, major: prof.major || user.major || "—", specialty: prof.specialty || "", cls: prof.cls || "", contact: prof.contact || "", nickname: prof.nickname || prof.name || user.name || user.username };
-  if ($("#li-remember").checked) storeUser();
+  storeUser();
   showApp({ replace: true });
 }
 function showErr(m) {
@@ -163,7 +163,6 @@ function logout() {
   $("#topSearch").value = "";
   $("#li-user").value = "";
   $("#li-pass").value = "";
-  $("#li-remember").checked = false;
   $("#app").style.display = "none";
   $("#login").style.display = "flex";
   hideAIFAB();
@@ -424,6 +423,7 @@ function navigate(key, opts) {
   hideCrumb();
   if (!opts.noPush && !popHandling) pushView(key, opts.replace);
   const v = $("#view");
+  const content = $(".content");
   v.querySelectorAll(".page").forEach((p) => p.style.display = "none");
   if (!pages[key]) {
     const page = el("div", "page");
@@ -436,6 +436,8 @@ function navigate(key, opts) {
     else if (key === "signin") renderSignin(page);
   }
   pages[key].style.display = "block";
+  if (key === "learn") content.classList.add("learn-active");
+  else content.classList.remove("learn-active");
 }
 
 /* ---------------- 面包屑 ---------------- */
@@ -530,14 +532,24 @@ function openCourse(id, skipNav) {
   pages.learn.style.display = "block";
   pages.learn.innerHTML = "";
   renderLearn(pages.learn, c);
+  $(".content").classList.add("learn-active");
   if (!skipNav) pushView("learn", false, { courseId: id });
 }
 
 function renderLearn(v, c) {
   v.innerHTML = "";
-  v.appendChild(el("h1", "h-title", c.title));
   const saved = NF(localStorage.getItem("progress_" + c.id)) || c.progress;
-  v.appendChild(el("p", "h-sub", c.category + " · " + c.teacher + " · 进度 " + saved + "%"));
+
+  const header = el("div", "learn-header");
+  const backBtn = el("button", "btn sm ghost learn-back-btn");
+  backBtn.innerHTML = icon("arrow-left", 14) + " 返回课程";
+  backBtn.onclick = () => navigate("home");
+  header.appendChild(backBtn);
+  const titleWrap = el("div");
+  titleWrap.appendChild(el("h1", "h-title", c.title));
+  titleWrap.appendChild(el("p", "h-sub", c.category + " · " + c.teacher + " · 进度 " + saved + "%"));
+  header.appendChild(titleWrap);
+  v.appendChild(header);
 
   if (!c.sections || c.sections.length === 0) {
     const empty = el("div", "card");
@@ -557,28 +569,58 @@ function renderLearn(v, c) {
   const docs = c.sections.filter((s) => s.stype === "doc");
   const quizzes = c.sections.filter((s) => s.stype === "quiz");
 
-  const player = el("div");
-  player.style.cssText = "border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);background:#000";
-  const video = document.createElement("video");
-  video.controls = true;
-  video.style.cssText = "width:100%;display:block;max-height:420px;background:#000";
-  if (videos[0]) video.src = videos[0].content;
-  video.addEventListener("timeupdate", () => {
-    if (!video.duration) return;
-    const ratio = Math.min(100, Math.round((video.currentTime / video.duration) * 100));
-    const key = "progress_" + c.id;
-    const prev = NF(localStorage.getItem(key)) || 0;
-    if (ratio > prev) { localStorage.setItem(key, ratio); refreshProgressLabel(c, ratio); }
-    // 累计学习时长（每播放满 60 秒记 1 分钟）
-    const tickKey = "studyTick_" + c.id;
-    const lastTick = NF(localStorage.getItem(tickKey)) || 0;
-    if (video.currentTime - lastTick >= 60) {
-      const studyKey = "studyMin_" + c.id;
-      localStorage.setItem(studyKey, (NF(localStorage.getItem(studyKey)) || 0) + 1);
-      localStorage.setItem(tickKey, video.currentTime);
+  const player = el("div", "player-wrap");
+  player.style.cssText = "border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);background:#000;position:relative;min-height:320px";
+  let currentVideo = videos[0] || null;
+
+  function buildVideoPoster(s) {
+    player.innerHTML = "";
+    const poster = el("div", "video-poster");
+    const hasVideo = s && s.content;
+    poster.style.cssText = "position:absolute;inset:0;background:" + (hasVideo ? "linear-gradient(160deg,#3A3550,#574E7A)" : "linear-gradient(160deg,#5A5A6A,#7A7A8A)") + ";display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;" + (hasVideo ? "cursor:pointer;" : "cursor:default;") + "z-index:2";
+    if (hasVideo) {
+      poster.innerHTML =
+        '<div class="video-poster-play">' + icon("video", 36) + '</div>' +
+        '<div style="margin-top:14px;font-size:16px;font-weight:700">' + esc(s.title) + '</div>' +
+        '<div style="margin-top:6px;font-size:12px;opacity:.75">点击开始播放</div>';
+      poster.onclick = () => startVideo(s);
+    } else {
+      poster.innerHTML =
+        '<div style="font-size:40px;opacity:.6">📭</div>' +
+        '<div style="margin-top:14px;font-size:16px;font-weight:700">教师未上传视频</div>' +
+        '<div style="margin-top:6px;font-size:12px;opacity:.75">可以先看下方推荐视频</div>';
     }
-  });
-  player.appendChild(video);
+    player.appendChild(poster);
+  }
+
+  function startVideo(s) {
+    if (!s) return;
+    currentVideo = s;
+    player.innerHTML = "";
+    const video = document.createElement("video");
+    video.controls = true;
+    video.style.cssText = "width:100%;display:block;max-height:420px;background:#000";
+    video.src = s.content;
+    video.addEventListener("timeupdate", () => {
+      if (!video.duration) return;
+      const ratio = Math.min(100, Math.round((video.currentTime / video.duration) * 100));
+      const key = "progress_" + c.id;
+      const prev = NF(localStorage.getItem(key)) || 0;
+      if (ratio > prev) { localStorage.setItem(key, ratio); refreshProgressLabel(c, ratio); }
+      // 累计学习时长（每播放满 60 秒记 1 分钟）
+      const tickKey = "studyTick_" + c.id;
+      const lastTick = NF(localStorage.getItem(tickKey)) || 0;
+      if (video.currentTime - lastTick >= 60) {
+        const studyKey = "studyMin_" + c.id;
+        localStorage.setItem(studyKey, (NF(localStorage.getItem(studyKey)) || 0) + 1);
+        localStorage.setItem(tickKey, video.currentTime);
+      }
+    });
+    player.appendChild(video);
+    video.play().catch(() => {});
+  }
+
+  buildVideoPoster(currentVideo);
 
   const tabs = el("div", "learn-tabs");
   const tabDefs = [
@@ -589,10 +631,28 @@ function renderLearn(v, c) {
   ];
   let curTab = "video";
 
-  function buildRecs(recs) {
+  function buildRecs(recs, key) {
     const box = el("div", "video-recs");
     if (!recs || !recs.length) return box;
-    box.innerHTML = '<div class="rec-title">本章节推荐视频</div>';
+    const ckey = "rec_collapsed_" + (key || c.id);
+    const collapsed = lsGet(ckey, true);
+    if (collapsed) box.classList.add("collapsed");
+
+    const head = el("div", "rec-head");
+    const title = el("div", "rec-title", "本章节推荐视频");
+    const toggle = el("button", "rec-toggle", collapsed ? "展开 ▼" : "收起 ▲");
+    toggle.title = "折叠/展开推荐视频";
+    toggle.onclick = (e) => {
+      e.stopPropagation();
+      const now = box.classList.toggle("collapsed");
+      toggle.textContent = now ? "展开 ▼" : "收起 ▲";
+      lsSet(ckey, now);
+    };
+    head.appendChild(title);
+    head.appendChild(toggle);
+    box.appendChild(head);
+
+    const body = el("div", "rec-body");
     const ul = el("div", "rec-list");
     recs.forEach((r) => {
       const a = el("a", "rec-item");
@@ -600,7 +660,8 @@ function renderLearn(v, c) {
       a.innerHTML = '<span class="ic" data-icon="video"> </span><span>' + esc(r.title) + '</span><span class="rec-src">' + esc(r.source) + '</span>';
       ul.appendChild(a);
     });
-    box.appendChild(ul);
+    body.appendChild(ul);
+    box.appendChild(body);
     return box;
   }
 
@@ -610,7 +671,7 @@ function renderLearn(v, c) {
     if (curTab === "video") {
       panel.appendChild(player);
       // 视频推荐链接（随当前章节变化）
-      recBox = buildRecs((videos[0] && videos[0].recs) || VIDEO_LINKS[c.id]);
+      recBox = buildRecs((videos[0] && videos[0].recs) || VIDEO_LINKS[c.id], currentVideo ? currentVideo.title : c.id);
       panel.appendChild(recBox);
       const note = el("p", "muted");
       note.style.cssText = "font-size:12px;margin-top:12px";
@@ -621,11 +682,12 @@ function renderLearn(v, c) {
       videos.forEach((s, i) => {
         const it = el("div", "item" + (i === 0 ? " active" : ""), s.title);
         it.onclick = () => {
-          video.src = s.content; video.play().catch(() => {});
+          currentVideo = s;
+          buildVideoPoster(s);
           [...chapter.querySelectorAll(".item")].forEach((x) => x.classList.remove("active"));
           it.classList.add("active");
           if (recBox) {
-            const next = buildRecs(s.recs || VIDEO_LINKS[c.id]);
+            const next = buildRecs(s.recs || VIDEO_LINKS[c.id], s.title);
             recBox.parentNode.replaceChild(next, recBox);
             recBox = next;
           }
@@ -710,43 +772,29 @@ function renderQuizPanel(panel, c) {
       const info = el("div", "quiz-score-info");
       info.innerHTML =
         '<div class="quiz-score-num">得分 ' + stored.score + ' / ' + quiz.questions.length + '</div>' +
-        '<div class="quiz-score-time">提交于 ' + (stored.at ? stored.at.slice(0, 10) + " " + stored.at.slice(11, 16) : "—") + '</div>';
+        '<div class="quiz-score-time">' + (stored.at ? "提交于 " + stored.at.slice(0, 10) + " " + stored.at.slice(11, 16) : "已提交") + '</div>';
       summary.appendChild(circle);
       summary.appendChild(info);
       wrap.appendChild(summary);
 
-      quiz.questions.forEach((q, i) => {
-        const userAns = (stored.answers && stored.answers[i] != null) ? stored.answers[i] : -1;
-        const isCorrect = userAns === q.answer;
-        const qbox = el("div", "quiz-q quiz-review" + (isCorrect ? " correct" : " wrong"));
-        qbox.innerHTML =
-          '<div class="quiz-qq"><span class="quiz-no">Q' + (i + 1) + '</span>' + esc(q.q) + '</div>' +
-          '<div class="quiz-status">' + (isCorrect ? "✓ 回答正确" : (userAns < 0 ? "✗ 未作答" : "✗ 回答错误")) + '</div>';
-        const opts = el("div", "quiz-opts");
-        q.options.forEach((opt, j) => {
-          const row = el("div", "quiz-opt-row");
-          if (j === q.answer) row.classList.add("right");
-          if (j === userAns && j !== q.answer) row.classList.add("picked-wrong");
-          row.innerHTML = '<span class="quiz-opt-letter">' + String.fromCharCode(65 + j) + '</span><span>' + esc(opt) + '</span>';
-          opts.appendChild(row);
-        });
-        qbox.appendChild(opts);
-        if (q.explanation) {
-          const exp = el("div", "quiz-exp");
-          exp.innerHTML = '<b>解析：</b>' + esc(q.explanation);
-          qbox.appendChild(exp);
-        }
-        wrap.appendChild(qbox);
-      });
+      const hint = el("div", "quiz-hint");
+      hint.textContent = "这是你的上次作答记录，题目答案默认隐藏，可点击查看解析。";
+      wrap.appendChild(hint);
 
-      const reset = el("button", "btn ghost", "重新测验");
-      reset.style.marginTop = "10px";
-      reset.onclick = () => {
+      const actions = el("div", "quiz-actions");
+      const viewBtn = el("button", "btn sm", "查看解析");
+      const resetBtn = el("button", "btn sm ghost", "重新测验");
+      actions.appendChild(viewBtn);
+      actions.appendChild(resetBtn);
+      wrap.appendChild(actions);
+
+      viewBtn.onclick = () => renderQuizReview(wrap, quiz, stored, c, qIdx, panel);
+      resetBtn.onclick = () => {
         if (!confirm("重新测验将清空本次作答记录，确定吗？")) return;
         lsSet(quizKey(c, qIdx), null);
         renderQuizPanel(panel, c);
       };
-      wrap.appendChild(reset);
+
       panel.appendChild(wrap);
       return;
     }
@@ -784,56 +832,54 @@ function renderQuizPanel(panel, c) {
   });
 }
 
-/* ---------------- 课程讨论（OpenMAIC 助教自动回复） ---------------- */
-const COMMON_KNOWLEDGE = [
-  { keys: ["大数据"], reply: "大数据（Big Data）通常指规模巨大、类型多样、产生速度快，且传统工具难以处理的数据集合。它的核心价值在于通过分析与挖掘，发现规律、支持决策。典型特征可概括为“5V”：Volume（大量）、Velocity（高速）、Variety（多样）、Value（价值密度低）、Veracity（真实性）。" },
-  { keys: ["人工智能", "ai"], reply: "人工智能（AI）是让计算机或机器模拟、延伸和扩展人类智能的技术科学，包括感知、推理、学习、决策等能力。机器学习与深度学习是实现 AI 的主要方法。" },
-  { keys: ["机器学习"], reply: "机器学习（Machine Learning）是人工智能的一个分支，它让计算机从数据中自动学习规律，而无需针对每个任务显式编程。常见任务包括分类、回归、聚类和降维。" },
-  { keys: ["深度学习"], reply: "深度学习（Deep Learning）是机器学习的一种，基于多层神经网络（尤其是深层神经网络）来自动学习数据的层次化特征表示，在图像、语音、自然语言处理等领域表现突出。" },
-  { keys: ["数据科学"], reply: "数据科学是一门交叉学科，结合统计学、计算机科学与领域知识，从数据中提取洞见、构建模型并支持决策。完整流程通常包括问题定义、数据采集、清洗、探索性分析、建模、解释与部署。" },
-  { keys: ["神经网络"], reply: "神经网络是一种受生物神经元启发的计算模型，由输入层、隐藏层和输出层组成，通过调整连接权重来学习数据中的模式。层数较多的网络称为深度神经网络。" },
-  { keys: ["算法"], reply: "算法是解决特定问题的一系列清晰、有限的计算步骤。评价算法时通常关注正确性、时间复杂度、空间复杂度和可解释性。" },
-  { keys: ["数据可视化"], reply: "数据可视化是把数据以图形、图表等形式呈现，帮助人们直观理解数据分布、趋势和关系。常见工具包括 Matplotlib、Seaborn、Tableau 和 ECharts。" },
-  { keys: ["统计学"], reply: "统计学是收集、整理、分析、解释数据并据此进行推断的学科。核心概念包括总体与样本、描述统计与推断统计、假设检验、置信区间等。" },
-];
-
-function commonReply(q) {
-  for (const item of COMMON_KNOWLEDGE) {
-    if (item.keys.some((k) => q.includes(k))) return item.reply;
-  }
-  return null;
+function renderQuizReview(wrap, quiz, stored, c, qIdx, panel) {
+  wrap.innerHTML = '<div class="quiz-head">' + esc(quiz.title) + ' · 解析</div>';
+  quiz.questions.forEach((q, i) => {
+    const userAns = (stored.answers && stored.answers[i] != null) ? stored.answers[i] : -1;
+    const isCorrect = userAns === q.answer;
+    const qbox = el("div", "quiz-q quiz-review" + (isCorrect ? " correct" : " wrong"));
+    qbox.innerHTML =
+      '<div class="quiz-qq"><span class="quiz-no">Q' + (i + 1) + '</span>' + esc(q.q) + '</div>' +
+      '<div class="quiz-status">' + (isCorrect ? "✓ 回答正确" : (userAns < 0 ? "✗ 未作答" : "✗ 回答错误")) + '</div>';
+    const opts = el("div", "quiz-opts");
+    q.options.forEach((opt, j) => {
+      const row = el("div", "quiz-opt-row");
+      if (j === q.answer) row.classList.add("right");
+      if (j === userAns && j !== q.answer) row.classList.add("picked-wrong");
+      row.innerHTML = '<span class="quiz-opt-letter">' + String.fromCharCode(65 + j) + '</span><span>' + esc(opt) + '</span>';
+      opts.appendChild(row);
+    });
+    qbox.appendChild(opts);
+    if (q.explanation) {
+      const exp = el("div", "quiz-exp");
+      exp.innerHTML = '<b>解析：</b>' + esc(q.explanation);
+      qbox.appendChild(exp);
+    }
+    wrap.appendChild(qbox);
+  });
+  const back = el("button", "btn sm ghost", "返回概览");
+  back.style.marginTop = "10px";
+  back.onclick = () => renderQuizPanel(panel, c);
+  wrap.appendChild(back);
 }
 
-function aiReply(question, c) {
-  const q = question.toLowerCase();
-  // 通用知识优先
-  const general = commonReply(q);
-  if (general) return general;
+/* ---------------- 课程讨论 / 悬浮 AI：固定话术回复（无后端、不接大模型） ---------------- */
 
-  if (c.id === 1) {
-    if (q.includes("引用") || q.includes("页码")) return "直接引用必须标注页码，间接引用需注明作者与年份。建议查看《学术写作与规范》第 2 章课件。";
-    if (q.includes("综述") || q.includes("文献")) return "文献综述不是罗列文献，而是梳理研究脉络、指出研究缺口，并为自己的研究定位。";
-    if (q.includes("诚信") || q.includes("抄袭") || q.includes("剽窃")) return "学术诚信要求对他人观点正确引用，避免一稿多投、伪造数据和代写等学术不端行为。";
-    if (q.includes("摘要")) return "摘要应概括研究目的、方法、结果与结论，通常不超过 300 字，避免引用文献和图表。";
-    if (q.includes("结论")) return "结论部分应总结主要发现、回应研究问题，并指出研究局限与未来方向，不要引入正文未讨论的新观点。";
-    return "你的问题很有意思。作为《" + c.title + "》的 OpenMAIC 助教，建议你先定位到课程对应的章节视频或资料，如果还有具体细节想讨论，可以继续追问。";
+// AI 助教回复：基于关键词匹配 data.js 中的预设话术，不调用任何外部接口、不跳转、不转圈。
+// 后续接入真实模型 / 后端时，只需把本函数内部替换为接口调用即可（保持返回 { text } 结构）。
+function getAIReply(question, courseTitle) {
+  const q = (question || "").toLowerCase();
+  for (const item of AI_REPLIES) {
+    if (item.keys.some((k) => q.indexOf(k.toLowerCase()) !== -1)) {
+      return { text: item.answer };
+    }
   }
-  if (c.id === 3) {
-    if (q.includes("电车") || q.includes("自动驾驶")) return "自动驾驶的“电车难题”主要讨论在不可避免的碰撞中，算法应如何权衡不同主体的安全与责任。";
-    if (q.includes("责任") || q.includes("公众")) return "工程伦理强调：工程师的首要责任是公众的安全、健康与福祉，其次才考虑雇主或客户利益。";
-    if (q.includes("举报") || q.includes("whistleblowing")) return "Whistleblowing 是工程师在发现危及公众利益的问题时，向相关机构举报的行为，是负责任的最后手段。";
-    if (q.includes("伦理") || q.includes("道德")) return "工程伦理关注技术在具体应用场景中的价值判断与行为规范，核心是在技术可行性与社会责任之间寻求平衡。";
-    if (q.includes("案例") || q.includes("事故")) return "常见的工程伦理案例包括挑战者号航天飞机、福岛核事故、波音 737 MAX 等。分析时可从责任主体、决策过程、信息披露与后果评估四个维度入手。";
-    return "工程伦理需要在技术可行性与社会责任之间做综合判断。你可以结合具体案例继续追问。";
-  }
-  if (c.id === 2) {
-    if (q.includes("过拟合")) return "过拟合指模型在训练集表现很好，但在新数据上表现差，需要通过正则化、交叉验证、增加数据等方法缓解。";
-    if (q.includes("eda") || q.includes("探索性")) return "EDA 是 Exploratory Data Analysis，即探索性数据分析，帮助我们理解数据分布、发现异常与规律。";
-    if (q.includes("特征")) return "特征工程是把原始数据转换为更适合模型输入的变量，包括特征选择、特征构造、归一化、编码等步骤，往往比模型选择更能决定最终效果。";
-    if (q.includes("模型")) return "模型是对现实问题的数学抽象。选择模型时需要权衡可解释性、复杂度、训练成本与预测性能。";
-    return "数据科学强调从数据中提取洞见、支持决策。继续提问，我可以帮你梳理思路。";
-  }
-  return "收到你的问题。作为 OpenMAIC 助教，我会结合课程知识点来回答。如果这个问题比较开放，也欢迎你说明具体想深入的方向。";
+  return { text: AI_FALLBACK };
+}
+
+function nowHM() {
+  const ts = new Date();
+  return String(ts.getHours()).padStart(2, "0") + ":" + String(ts.getMinutes()).padStart(2, "0");
 }
 
 function renderDiscussion(panel, c) {
@@ -876,11 +922,10 @@ function renderDiscussion(panel, c) {
     list.forEach((m) => {
       floor++;
       const isMe = m.user === currentUser.name;
-      const isTeacher = m.role === "teacher";
       const isAI = m.role === "ai";
-      const wrap = el("div", "chat-msg " + (isMe ? "me" : (isAI ? "ai" : "ai")));
+      const wrap = el("div", "chat-msg " + (isMe ? "me" : (isAI ? "ai" : "")));
       const meta = el("div", "meta");
-      const badge = isAI ? '<span class="badge-ai">OpenMAIC 助教</span>' : (isTeacher ? '<span class="badge-teacher">教师</span>' : "");
+      const badge = isAI ? '<span class="badge-ai">AI 助教</span>' : (m.role === "teacher" ? '<span class="badge-teacher">教师</span>' : "");
       meta.innerHTML = '<span style="font-weight:700">' + esc(m.user) + "</span>" + badge +
         "<span>· " + (m.ts || "") + "</span><span>· #" + floor + "楼</span>";
       wrap.appendChild(meta);
@@ -893,28 +938,26 @@ function renderDiscussion(panel, c) {
 
   const input = el("div", "chat-input");
   const ipt = document.createElement("input");
-  ipt.placeholder = "输入问题，OpenMAIC 助教将优先解答…";
+  ipt.placeholder = "向 AI 助教提问，将获得解答…";
   const send = el("button", "btn ai", "发送");
-  send.onclick = () => {
+  send.onclick = async () => {
     const v = ipt.value.trim();
     if (!v) return;
     if (collapsed) { collapsed = false; applyCollapse(); }
-    const ts = new Date();
-    const hh = String(ts.getHours()).padStart(2, "0");
-    const mm = String(ts.getMinutes()).padStart(2, "0");
-    list.push({ user: currentUser.name, role: "student", content: v, ts: "今天 " + hh + ":" + mm, floor: list.length + 1 });
+    list.push({ user: currentUser.name, role: "student", content: v, ts: "今天 " + nowHM(), floor: list.length + 1, openMAIC: false });
     lsSet(key, list);
     ipt.value = "";
     paint();
-    setTimeout(() => {
-      const reply = aiReply(v, c);
-      const now = new Date();
-      const h2 = String(now.getHours()).padStart(2, "0");
-      const m2 = String(now.getMinutes()).padStart(2, "0");
-      list.push({ user: "OpenMAIC 助教", role: "ai", content: reply, ts: "今天 " + h2 + ":" + m2, floor: list.length + 1 });
-      lsSet(key, list);
-      paint();
-    }, 900);
+    // 思考中占位
+    const thinking = el("div", "chat-msg ai");
+    thinking.innerHTML = '<div class="meta"><span style="font-weight:700">AI 助教</span></div><div class="typing"><span></span><span></span><span></span></div>';
+    msgs.appendChild(thinking);
+    msgs.scrollTop = msgs.scrollHeight;
+    const result = await getAIReply(v, c.title);
+    thinking.remove();
+    list.push({ user: "AI 助教", role: "ai", content: result.text, ts: "今天 " + nowHM(), floor: list.length + 1 });
+    lsSet(key, list);
+    paint();
   };
   ipt.addEventListener("keydown", (e) => { if (e.key === "Enter") send.onclick(); });
   input.appendChild(ipt);
@@ -1171,21 +1214,24 @@ function addAIMsg(text, me) {
   box.appendChild(wrap);
   box.scrollTop = box.scrollHeight;
 }
-function sendAI() {
+function addAIMsgTyping() {
+  const box = $("#aiDrawerMsgs");
+  const wrap = el("div", "ai-msg ai");
+  wrap.innerHTML = '<div class="typing"><span></span><span></span><span></span></div>';
+  box.appendChild(wrap);
+  box.scrollTop = box.scrollHeight;
+  return wrap;
+}
+async function sendAI() {
   const ipt = $("#aiDrawerInput");
   const v = ipt.value.trim();
   if (!v) return;
   addAIMsg(v, true);
   ipt.value = "";
-  setTimeout(() => {
-    const q = v.toLowerCase();
-    let reply = "我理解了你的问题。作为 OpenMAIC 助教，建议你先查看对应课程的「视频」与「资料」章节，如果仍有疑问可以在课程讨论区继续提问。";
-    if (q.includes("签到")) reply = "签到在左侧「课堂签到」页面完成。若已签到，切换页面后状态会保留。";
-    else if (q.includes("作业") || q.includes("测验")) reply = "作业与测验均在学习页对应课程下。完成测验后成绩会自动同步到学情看板。";
-    else if (q.includes("视频") || q.includes("进度")) reply = "视频进度会在你看课时自动记录，并同步到学情看板。";
-    else if (q.includes("密码") || q.includes("登录")) reply = "如果忘记密码，可在登录页点击「忘记密码」重置。演示版注册信息保存在当前浏览器。";
-    addAIMsg(reply, false);
-  }, 600);
+  const typing = addAIMsgTyping();
+  const result = await getAIReply(v, "研究生通识课");
+  if (typing && typing.remove) typing.remove();
+  addAIMsg(result.text, false);
 }
 
 /* ---------------- 启动 ---------------- */
@@ -1228,6 +1274,10 @@ function sendAI() {
   }
 
   document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const d = $("#aiDrawer");
+      if (d && d.classList.contains("show")) { toggleAIDrawer(); return; }
+    }
     if (e.key !== "Enter" || $("#login").style.display === "none") return;
     if ($("#regForm").style.display !== "none") { doRegister(); return; }
     if (e.target.id === "li-user" || e.target.id === "li-pass") doLogin();

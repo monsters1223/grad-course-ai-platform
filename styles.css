@@ -607,6 +607,9 @@ option{padding:6px}
 .todo-row .ic{flex-shrink:0;color:var(--primary-deep)}
 .todo-row span{flex:1;min-width:0}
 .todo-row .btn{padding:5px 12px;font-size:11px}
+.todo-row.done{background:rgba(94,130,216,.08);border-color:rgba(94,130,216,.35);color:var(--text-soft)}
+.todo-row.done .ic{color:var(--success)}
+.todo-row.done em{font-style:normal;font-size:11px}
 .todo-empty{padding:20px;text-align:center;color:var(--text-3);font-size:13px}
 .dash-progress{margin-bottom:20px}
 .dash-progress .hbar{margin-bottom:10px}

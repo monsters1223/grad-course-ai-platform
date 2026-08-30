@@ -519,12 +519,13 @@ function navigate(key, opts) {
     page.id = "page-" + key;
     v.appendChild(page);
     pages[key] = page;
-    if (key === "home") renderHome(page);
-    else if (key === "aichat") renderAIChat(page);
-    else if (key === "dashboard") renderDashboard(page);
-    else if (key === "signin") renderSignin(page);
+    if (key === "aichat") renderAIChat(page); // 仅首次渲染，保留对话上下文
   }
   pages[key].style.display = "block";
+  // 数据页每次进入都重新读取本地记录，保证学情/进度/签到实时同步
+  if (key === "home") renderHome(pages[key]);
+  else if (key === "dashboard") renderDashboard(pages[key]);
+  else if (key === "signin") renderSignin(pages[key]);
   if (key === "learn") content.classList.add("learn-active");
   else content.classList.remove("learn-active");
 }
@@ -916,6 +917,7 @@ function renderQuizPanel(panel, c) {
         if (val === q.answer) score++;
       });
       lsSet(quizKey(c, qIdx), { submitted: true, score: score, total: quiz.questions.length, answers: answers, at: new Date().toISOString() });
+      if (pages.dashboard) renderDashboard(pages.dashboard);
       renderQuizPanel(panel, c);
       toast("测验已提交，得分 " + score + "/" + quiz.questions.length);
     };
@@ -1174,8 +1176,13 @@ function renderDashboard(v) {
     const st = getCourseStats(c);
     if (st.videoProg < 100) tasks.push({ type: "video", text: "完成「" + c.title + "」视频学习（当前 " + st.videoProg + "%）", cid: c.id });
     if (st.totalQuiz && st.quizCount < st.totalQuiz) tasks.push({ type: "quiz", text: "完成「" + c.title + "」剩余章节测验", cid: c.id });
+    const hwState = lsGet(uKey("hw", c.id), {}) || {};
     (c.homeworks || []).forEach((hw) => {
-      tasks.push({ type: "hw", text: "待提交作业：「" + hw.title + "」" + (hw.due ? "（截止 " + hw.due + "）" : ""), cid: c.id });
+      if (hwState[hw.title]) {
+        tasks.push({ type: "hw-done", text: "已提交作业：「" + hw.title + "」", cid: c.id, hwTitle: hw.title, at: hwState[hw.title].at });
+      } else {
+        tasks.push({ type: "hw", text: "待提交作业：「" + hw.title + "」" + (hw.due ? "（截止 " + hw.due + "）" : ""), cid: c.id, hwTitle: hw.title });
+      }
     });
   });
   const todoCard = el("div", "card dash-todo");
@@ -1185,12 +1192,22 @@ function renderDashboard(v) {
   } else {
     const ul = el("div", "todo-list");
     tasks.forEach((t) => {
-      const row = el("div", "todo-row");
-      const iconName = t.type === "video" ? "video" : (t.type === "quiz" ? "clipboard" : "book-open");
-      row.innerHTML = '<span class="ic" data-icon="' + iconName + '"> </span><span>' + esc(t.text) + '</span>';
-      const btn = el("button", "btn sm", "去做");
-      btn.onclick = () => { openCourse(t.cid, true); };
-      row.appendChild(btn);
+      const row = el("div", "todo-row" + (t.type === "hw-done" ? " done" : ""));
+      const iconName = t.type === "video" ? "video" : (t.type === "quiz" ? "clipboard" : (t.type === "hw-done" ? "check-circle" : "book-open"));
+      row.innerHTML = '<span class="ic" data-icon="' + iconName + '"> </span><span>' + esc(t.text) + (t.at ? ' <em class="muted">（' + t.at.slice(0, 10) + '）</em>' : '') + '</span>';
+      if (t.type === "hw-done") {
+        const undo = el("button", "btn sm ghost", "撤销");
+        undo.onclick = () => unmarkHomework(t.cid, t.hwTitle);
+        row.appendChild(undo);
+      } else if (t.type === "hw") {
+        const btn = el("button", "btn sm", "标记已提交");
+        btn.onclick = () => markHomework(t.cid, t.hwTitle);
+        row.appendChild(btn);
+      } else {
+        const btn = el("button", "btn sm", "去做");
+        btn.onclick = () => { openCourse(t.cid, true); };
+        row.appendChild(btn);
+      }
       initIcons(row);
       ul.appendChild(row);
     });
@@ -1235,6 +1252,24 @@ function renderDashboard(v) {
   });
   chartCard.appendChild(bars);
   v.appendChild(chartCard);
+}
+
+// 作业提交状态（按用户隔离，纯前端演示：标记/撤销本地记录）
+function markHomework(cid, title) {
+  if (!title) return;
+  const m = lsGet(uKey("hw", cid), {}) || {};
+  m[title] = { at: new Date().toISOString() };
+  lsSet(uKey("hw", cid), m);
+  if (pages.dashboard) renderDashboard(pages.dashboard);
+  toast("已标记为提交：「" + title + "」");
+}
+function unmarkHomework(cid, title) {
+  if (!title) return;
+  const m = lsGet(uKey("hw", cid), {}) || {};
+  delete m[title];
+  lsSet(uKey("hw", cid), m);
+  if (pages.dashboard) renderDashboard(pages.dashboard);
+  toast("已撤销提交：「" + title + "」");
 }
 
 /* ---------------- 课堂签到 ---------------- */

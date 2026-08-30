@@ -759,7 +759,7 @@ function refreshProgressLabel(c, ratio) {
 }
 
 /* ---------------- 章节测验（可交互） ---------------- */
-function quizKey(c, qIdx) { return "quiz_" + c.id + "_" + qIdx; }
+function quizKey(c, qIdx) { return uKey("quiz", c.id) + "_" + qIdx; }
 
 function renderQuizPanel(panel, c) {
   panel.innerHTML = "";
@@ -1062,7 +1062,7 @@ function renderDashboard(v) {
   const studyHours = +(totalStudyMin / 60).toFixed(1);
   const avgVideo = totalVideoNum ? Math.round(totalVideoPct / totalVideoNum) : 0;
   const avgScore = totalScoreNum ? Math.round(totalScoreSum / totalScoreNum) : 0;
-  const signState = lsGet("signin_done", null);
+  const signState = lsGet(uKey("signin_done"), null);
   const signText = signState && signState.done ? "已签到" : "未签到";
 
   const stats = el("div", "stat-grid");
@@ -1162,7 +1162,7 @@ function renderSignin(v) {
   v.appendChild(el("div", "h-title", "课堂签到"));
   v.appendChild(el("p", "h-sub", "线下课程定位签到 / 扫码签到"));
 
-  const signState = lsGet("signin_done", null);
+  const signState = lsGet(uKey("signin_done"), null);
 
   const card = el("div", "signin-task");
   const left = el("div");
@@ -1174,7 +1174,7 @@ function renderSignin(v) {
     if (signState && signState.done) return;
     const now = new Date();
     const t = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0") + "-" + String(now.getDate()).padStart(2,"0") + " " + String(now.getHours()).padStart(2,"0") + ":" + String(now.getMinutes()).padStart(2,"0");
-    lsSet("signin_done", { done: true, time: t });
+    lsSet(uKey("signin_done"), { done: true, time: t });
     btn.textContent = "✅ 已签到";
     btn.className = "btn ai";
     btn.disabled = true;

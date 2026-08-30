@@ -56,16 +56,31 @@ function lsGet(key, fallback) {
 }
 function lsSet(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch (e) {} }
 
+// 演示级密码哈希（无后端）：用 Web Crypto 的 SHA-256，避免明文存进 localStorage。
+// 注意：纯前端无服务端盐，仅作"防明文泄露"的演示防护，不等同真实账户安全；
+// 正式上线应由后端（site/）用 pbkdf2/bcrypt 加盐哈希，前端只持 JWT。
+async function hashPwd(p) {
+  if (p == null) return "";
+  try {
+    const data = new TextEncoder().encode(String(p));
+    const buf = await crypto.subtle.digest("SHA-256", data);
+    return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  } catch (e) {
+    // 极少数不支持 crypto.subtle 的环境降级（非哈希，仅作基础混淆）
+    return "fb_" + btoa(unescape(encodeURIComponent(String(p))));
+  }
+}
+
 function getAllUsers() {
   return USERS.concat(lsGet("reg_users", []));
 }
 
 /* ---------------- 登录 / 退出 ---------------- */
-function doLogin() {
+async function doLogin() {
   const u = $("#li-user").value.trim();
   const p = $("#li-pass").value;
   const user = getAllUsers().find((x) => x.username === u);
-  if (!user || !checkPass(u, p)) {
+  if (!user || !(await checkPass(u, p))) {
     showErr("账号或密码错误");
     return;
   }
@@ -105,7 +120,7 @@ function togglePwdReg2() {
   if (inp.type === "password") { inp.type = "text"; eye.innerHTML = icon("eye-off"); }
   else { inp.type = "password"; eye.innerHTML = icon("eye"); }
 }
-function doRegister() {
+async function doRegister() {
   const sid = $("#reg-user").value.trim();
   const p1 = $("#reg-pass").value;
   const p2 = $("#reg-pass2").value;
@@ -114,8 +129,9 @@ function doRegister() {
   if (p1.length < 6) { msg.style.color = "var(--danger)"; msg.textContent = "密码至少 6 位"; return; }
   if (p1 !== p2) { msg.style.color = "var(--danger)"; msg.textContent = "两次输入的密码不一致"; return; }
   if (getAllUsers().some((x) => x.username === sid)) { msg.style.color = "var(--danger)"; msg.textContent = "该学号已注册，请直接登录"; return; }
+  const hp = await hashPwd(p1);
   const reg = lsGet("reg_users", []);
-  reg.push({ username: sid, password: p1, name: sid, studentId: sid, major: "—" });
+  reg.push({ username: sid, password: hp, name: sid, studentId: sid, major: "—" });
   lsSet("reg_users", reg);
   msg.style.color = "var(--ok, #16a34a)";
   msg.textContent = "✓ 注册成功，请点击下方返回登录";
@@ -140,7 +156,7 @@ function togglePwdFg2() {
   if (inp.type === "password") { inp.type = "text"; eye.innerHTML = icon("eye-off"); }
   else { inp.type = "password"; eye.innerHTML = icon("eye"); }
 }
-function doForgot() {
+async function doForgot() {
   const sid = $("#fg-user").value.trim();
   const p1 = $("#fg-pass").value;
   const p2 = $("#fg-pass2").value;
@@ -149,12 +165,13 @@ function doForgot() {
   if (p1.length < 6) { msg.style.color = "var(--danger)"; msg.textContent = "密码至少 6 位"; return; }
   if (p1 !== p2) { msg.style.color = "var(--danger)"; msg.textContent = "两次输入的密码不一致"; return; }
   if (!getAllUsers().some((x) => x.username === sid)) { msg.style.color = "var(--danger)"; msg.textContent = "该学号尚未注册，请先注册"; return; }
+  const hp = await hashPwd(p1);
   const reg = lsGet("reg_users", []);
   const i = reg.findIndex((x) => x.username === sid);
-  if (i >= 0) { reg[i].password = p1; lsSet("reg_users", reg); }
+  if (i >= 0) { reg[i].password = hp; lsSet("reg_users", reg); }
   else {
     const ov = lsGet("pwd_override", {});
-    ov[sid] = p1; lsSet("pwd_override", ov);
+    ov[sid] = hp; lsSet("pwd_override", ov);
   }
   msg.style.color = "var(--ok, #16a34a)";
   msg.textContent = "✓ 密码已重置，请用新密码登录";
@@ -203,11 +220,12 @@ function setProfile(u, patch) {
   map[u] = Object.assign(map[u] || {}, patch);
   lsSet("profiles", map);
 }
-function checkPass(u, p) {
+async function checkPass(u, p) {
+  const hp = await hashPwd(p);
   const ov = lsGet("pwd_override", {});
-  if (ov[u] != null) return ov[u] === p;
+  if (ov[u] != null) return ov[u] === hp;
   const base = getAllUsers().find((x) => x.username === u);
-  return base && base.password === p;
+  return !!(base && base.password === hp);
 }
 function applyAvatar() {
   const av = $("#topAvatar");
@@ -366,16 +384,17 @@ function saveInfo() {
   toast("✓ 资料已更新");
   renderProfileTab("info");
 }
-function savePwd() {
+async function savePwd() {
   const oldP = $("#pw-old").value, newP = $("#pw-new").value, newP2 = $("#pw-new2").value;
   const msg = $("#pw-msg");
-  if (!checkPass(currentUser.username, oldP)) { msg.textContent = "当前密码错误"; return; }
+  if (!(await checkPass(currentUser.username, oldP))) { msg.textContent = "当前密码错误"; return; }
   if (newP.length < 6) { msg.textContent = "新密码至少 6 位"; return; }
   if (newP !== newP2) { msg.textContent = "两次输入的新密码不一致"; return; }
+  const hp = await hashPwd(newP);
   const reg = lsGet("reg_users", []);
   const i = reg.findIndex((x) => x.username === currentUser.username);
-  if (i >= 0) { reg[i].password = newP; lsSet("reg_users", reg); }
-  else { const ov = lsGet("pwd_override", {}); ov[currentUser.username] = newP; lsSet("pwd_override", ov); }
+  if (i >= 0) { reg[i].password = hp; lsSet("reg_users", reg); }
+  else { const ov = lsGet("pwd_override", {}); ov[currentUser.username] = hp; lsSet("pwd_override", ov); }
   msg.style.color = "var(--success)"; msg.textContent = "✓ 密码已修改";
   $("#pw-old").value = ""; $("#pw-new").value = ""; $("#pw-new2").value = "";
 }

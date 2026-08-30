@@ -5,10 +5,11 @@
    如需修改课程/资料，改这里即可。
    ========================================================= */
 
-// 可登录的学生账号（演示用，密码为下发密码）
+// 可登录的学生账号（演示用）。密码以 SHA-256 哈希存储（前端演示级防护，非服务端安全）。
+// 原下发密码 123456 -> 8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92
 const USERS = [
-  { username: "2023110001", password: "123456", name: "陈嘉禾", studentId: "2023110001", major: "人工智能学院" },
-  { username: "2023110002", password: "123456", name: "林深夜", studentId: "2023110002", major: "计算机学院" },
+  { username: "2023110001", password: "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", name: "陈嘉禾", studentId: "2023110001", major: "人工智能学院" },
+  { username: "2023110002", password: "8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92", name: "林深夜", studentId: "2023110002", major: "计算机学院" },
 ];
 
 // AI 互动课堂（多智能体）稳定入口

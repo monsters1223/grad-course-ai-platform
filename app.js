@@ -400,24 +400,86 @@ async function savePwd() {
 }
 
 /* ---------------- 顶部通知 ---------------- */
-const NOTIFS = [
-  { ic: "clipboard", title: "新作业发布", desc: "《学术写作与规范》第三次随笔", time: "10 分钟前", to: "learn:1" },
-  { ic: "map-pin", title: "课堂签到提醒", desc: "数据科学导论 第 5 讲 10:00 开始", time: "1 小时前", to: "signin" },
-  { ic: "message", title: "教师回复了你", desc: "王怀安：方差与标准差的区别已补充", time: "昨天", to: "learn:1" },
-];
+// 通知改为动态生成：基于当前登录用户的真实学习数据（纯前端，无需后端）。
+// 包含「待完成测验 / 未签到 / 本周学习节奏」等个性化提醒，去掉写死的假作业与教师回复。
+function buildNotifs() {
+  const list = [];
+  // 1) 待完成章节测验（按用户隔离）
+  COURSES.forEach((c) => {
+    const quizzes = (c.sections || []).filter((s) => s.stype === "quiz");
+    if (!quizzes.length) return;
+    let pending = 0, done = 0;
+    quizzes.forEach((q, i) => {
+      const st = lsGet(quizKey(c, i), null);
+      if (st && st.submitted) done++; else pending++;
+    });
+    if (pending > 0) {
+      list.push({
+        ic: "clipboard",
+        title: "待完成测验 · " + c.title,
+        desc: "有 " + pending + " 份章节测验尚未提交（已提交 " + done + " 份）",
+        time: "待办",
+        to: "learn",
+        cid: c.id,
+      });
+    }
+  });
+  // 2) 未签到提醒（按用户隔离）
+  const sign = lsGet(uKey("signin_done"), null);
+  if (!sign || !sign.done) {
+    list.push({
+      ic: "map-pin",
+      title: "课堂签到提醒",
+      desc: "研究生通识课近期有线下课堂，记得课前完成签到",
+      time: "待办",
+      to: "signin",
+    });
+  }
+  // 3) 本周学习节奏提醒（按用户真实学习分钟）
+  const dlog = lsGet(uKey("studyDaily"), {}) || {};
+  const now = new Date();
+  let weekMin = 0;
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now); d.setDate(now.getDate() - i);
+    weekMin += (dlog[d.toISOString().slice(0, 10)] || 0);
+  }
+  if (weekMin < 30) {
+    list.push({
+      ic: "clock",
+      title: "学习节奏提醒",
+      desc: "本周累计学习 " + weekMin + " 分钟，建议每天保持 15 分钟以上",
+      time: "本周",
+      to: "dashboard",
+    });
+  }
+  // 4) 系统通知（始终存在，保证通知区非空）
+  list.push({
+    ic: "sparkles",
+    title: "AI 课堂已开放",
+    desc: "可进入多智能体课堂与 AI 助教互动、答疑、复习",
+    time: "系统",
+    to: "aichat",
+  });
+  return list;
+}
 
 function renderNotif() {
   const box = $("#notifyPanel");
-  box.innerHTML = '<div class="nt-head"><span>通知</span><span class="muted">共 ' + NOTIFS.length + ' 条</span></div>';
-  if (!NOTIFS.length) { box.innerHTML += '<div class="nt-empty">暂无通知</div>'; return; }
-  NOTIFS.forEach((n) => {
+  const notifs = buildNotifs();
+  box.innerHTML = '<div class="nt-head"><span>通知</span><span class="muted">共 ' + notifs.length + ' 条</span></div>';
+  if (!notifs.length) { box.innerHTML += '<div class="nt-empty">暂无通知</div>'; return; }
+  notifs.forEach((n) => {
     const item = el("div", "nt-item");
     const icBox = el("div", "nt-ic"); icBox.innerHTML = icon(n.ic, 18);
     const body = el("div"); body.style.flex = "1";
     body.innerHTML = '<div style="font-weight:700">' + esc(n.title) + '</div><div class="nt-body">' + esc(n.desc) + '</div>';
     const t = el("div", "muted"); t.style.fontSize = "11px"; t.style.whiteSpace = "nowrap"; t.textContent = n.time;
     item.appendChild(icBox); item.appendChild(body); item.appendChild(t);
-    item.onclick = () => { box.classList.remove("show"); const [k, cid] = n.to.split(":"); navigate(k); if (cid) openCourse(+cid, true); };
+    item.onclick = () => {
+      box.classList.remove("show");
+      if (n.cid) { openCourse(n.cid, true); return; }
+      if (n.to) navigate(n.to);
+    };
     box.appendChild(item);
   });
 }

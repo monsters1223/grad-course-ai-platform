@@ -9,6 +9,14 @@ const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&":
 const NF = (n) => Number(n);
 
 let currentUser = null;
+
+// 进度/学习时长按用户隔离：key 带上学号前缀。
+// 新注册用户（新学号）在本地没有任何记录，因此进度天然为 0，开始学习后才累积。
+function uKey(prefix, courseId) {
+  const uid = (currentUser && currentUser.username) || "_guest";
+  return prefix + "_" + uid + (courseId != null ? "_" + courseId : "");
+}
+
 let activeNav = "home";
 let searchTerm = "";
 let pages = {}; // SPA 页面缓存
@@ -494,8 +502,7 @@ function renderHome(v) {
     body.appendChild(el("div", "course-meta", c.category + " · " + c.teacher));
     const prog = el("div", "progress");
     const span = el("span");
-    const saved = NF(localStorage.getItem("progress_" + c.id));
-    const pct = saved || c.progress;
+    const pct = NF(localStorage.getItem(uKey("progress", c.id))) || 0;
     span.style.width = pct + "%";
     prog.appendChild(span);
     body.appendChild(prog);
@@ -538,7 +545,7 @@ function openCourse(id, skipNav) {
 
 function renderLearn(v, c) {
   v.innerHTML = "";
-  const saved = NF(localStorage.getItem("progress_" + c.id)) || c.progress;
+  const saved = NF(localStorage.getItem(uKey("progress", c.id))) || 0;
 
   const header = el("div", "learn-header");
   const backBtn = el("button", "btn sm ghost learn-back-btn");
@@ -604,16 +611,21 @@ function renderLearn(v, c) {
     video.addEventListener("timeupdate", () => {
       if (!video.duration) return;
       const ratio = Math.min(100, Math.round((video.currentTime / video.duration) * 100));
-      const key = "progress_" + c.id;
+      const key = uKey("progress", c.id);
       const prev = NF(localStorage.getItem(key)) || 0;
       if (ratio > prev) { localStorage.setItem(key, ratio); refreshProgressLabel(c, ratio); }
-      // 累计学习时长（每播放满 60 秒记 1 分钟）
-      const tickKey = "studyTick_" + c.id;
+      // 累计学习时长（每播放满 60 秒记 1 分钟），按用户隔离
+      const tickKey = uKey("studyTick", c.id);
       const lastTick = NF(localStorage.getItem(tickKey)) || 0;
       if (video.currentTime - lastTick >= 60) {
-        const studyKey = "studyMin_" + c.id;
+        const studyKey = uKey("studyMin", c.id);
         localStorage.setItem(studyKey, (NF(localStorage.getItem(studyKey)) || 0) + 1);
         localStorage.setItem(tickKey, video.currentTime);
+        // 写入「今日学习分钟」，用于学情看板「本周学习时长」
+        const dlog = lsGet(uKey("studyDaily"), {}) || {};
+        const today = new Date().toISOString().slice(0, 10);
+        dlog[today] = (dlog[today] || 0) + 1;
+        lsSet(uKey("studyDaily"), dlog);
       }
     });
     player.appendChild(video);
@@ -1018,9 +1030,9 @@ function renderAIChat(v) {
 
 /* ---------------- 学情看板 ---------------- */
 function getCourseStats(c) {
-  const studyMin = NF(localStorage.getItem("studyMin_" + c.id)) || 0;
+  const studyMin = NF(localStorage.getItem(uKey("studyMin", c.id))) || 0;
   const studyHours = +(studyMin / 60).toFixed(1);
-  const videoProg = NF(localStorage.getItem("progress_" + c.id)) || c.progress;
+  const videoProg = NF(localStorage.getItem(uKey("progress", c.id))) || 0;
   // 测验平均分
   const quizzes = (c.sections || []).filter((s) => s.stype === "quiz");
   let quizScore = 0, quizCount = 0;
@@ -1121,9 +1133,18 @@ function renderDashboard(v) {
   // 本周学习时长
   const chartCard = el("div", "chart-card");
   chartCard.appendChild(el("div", "h-title2", "本周学习时长（分钟）"));
+  // 本周学习时长：取最近 7 天真实学习分钟（按用户累计，开始学习后才会有数据）
+  const dlog = lsGet(uKey("studyDaily"), {}) || {};
+  const wd = ["日", "一", "二", "三", "四", "五", "六"];
+  const weekly = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const k = d.toISOString().slice(0, 10);
+    weekly.push({ label: "周" + wd[d.getDay()], val: dlog[k] || 0 });
+  }
   const bars = el("div", "bars");
-  const weekly = COURSES[0] && COURSES[0].analytics ? COURSES[0].analytics.weekly : [];
-  (weekly || []).forEach((w) => {
+  weekly.forEach((w) => {
     const bar = el("div", "bar");
     const col = el("div", "col");
     col.style.height = Math.min(180, w.val) + "px";

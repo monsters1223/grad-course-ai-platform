@@ -114,7 +114,6 @@ const COURSES = [
     coverText: "写",
     category: "人文通识",
     desc: "面向研究生的学术写作训练，涵盖文献综述、引用规范与论证结构。",
-    progress: 35,
     sections: [
       { stype: "video", title: "第1章 文献检索与综述", content: "assets/ch1.mp4", recs: [
         { title: "文献检索技巧：从知网到 Web of Science", url: "https://search.bilibili.com/all?keyword=文献检索%20知网%20Web%20of%20Science", source: "Bilibili" },
@@ -174,7 +173,6 @@ const COURSES = [
     coverText: "数",
     category: "理工通识",
     desc: "从数据思维到机器学习基础，建立跨学科的数据分析能力。",
-    progress: 0,
     sections: [
       { stype: "video", title: "第1章 数据思维与问题定义", content: "", recs: [
         { title: "什么是数据思维：从业务问题到数据问题", url: "https://search.bilibili.com/all?keyword=数据思维%20业务问题", source: "Bilibili" },
@@ -215,7 +213,6 @@ const COURSES = [
     coverText: "工",
     category: "理工通识",
     desc: "从真实工程事故出发，理解工程师的伦理责任与决策框架。",
-    progress: 60,
     sections: [
       { stype: "video", title: "第1章 工程伦理导论", content: "assets/ch1.mp4", recs: [
         { title: "工程伦理导论：公众安全与职业责任", url: "https://search.bilibili.com/all?keyword=工程伦理%20公众安全%20职业责任", source: "Bilibili" },

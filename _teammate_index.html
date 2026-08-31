@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>研究生通识课 AI 教育平台</title>
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ============ 登录 ============ -->
+<div id="login" class="login-wrap">
+  <div class="login-card">
+    <div class="login-left">
+      <div class="brand">
+        <div class="b-mark" data-icon="graduation-cap"></div>
+        <div>
+          <b>研究生通识课 AI 教育平台</b>
+          <div class="b-sub">多智能体 · 主动学习</div>
+        </div>
+      </div>
+      <h1>让通识课<br>主动学起来</h1>
+      <p>课程中心 · AI 互动课堂（OpenMAIC 多智能体）· 课程讨论 · 班级群聊 · 学习小组 · 课堂签到，一站式研究生通识课学习空间。</p>
+      <div class="b-tags">
+        <span><span class="ic" data-icon="book-open"></span> 课程中心</span>
+        <span><span class="ic" data-icon="bot"></span> AI 课堂</span>
+        <span><span class="ic" data-icon="message"></span> 群聊</span>
+        <span><span class="ic" data-icon="map-pin"></span> 签到</span>
+      </div>
+    </div>
+    <div class="login-right">
+      <h2>登录进入</h2>
+      <p class="h-sub">选择身份，进入你的学习空间</p>
+      <div class="role-switch">
+        <button type="button" class="rs-btn on" id="rsStudent" onclick="pickRole('student')">🎓 学生登录</button>
+        <button type="button" class="rs-btn" id="rsTeacher" onclick="pickRole('teacher')">🧑‍🏫 教师登录</button>
+      </div>
+      <div id="loginForm">
+        <div class="field"><label>学号 / 用户名</label><input id="li-user" placeholder="请输入 8 位学号" /></div>
+        <div class="field">
+          <label>密码</label>
+          <div class="field-in">
+            <input id="li-pass" type="password" placeholder="请输入密码" />
+            <span class="eye" id="eyeBtn" data-icon="eye" onclick="togglePwd()"></span>
+          </div>
+        </div>
+        <label class="remember"><input type="checkbox" id="li-remember" /> 记住此账号</label>
+        <button class="btn" style="width:100%;margin-top:6px" onclick="doLogin()">登录进入</button>
+        <p id="li-err" class="muted" style="color:var(--danger);min-height:18px;font-size:12px;margin-top:8px"></p>
+        <p class="muted" style="font-size:12px;margin-top:12px;text-align:center">
+          还没有账号？<span class="link" onclick="showRegister()">立即注册</span>
+        </p>
+        <p class="muted" style="font-size:11px;margin-top:8px;text-align:center" id="demoHint">演示账号：2023110001 / 123456</p>
+      </div>
+      <div id="regForm" style="display:none">
+        <div class="field"><label>学号</label><input id="reg-user" placeholder="请输入 8 位学号" inputmode="numeric" maxlength="8" /></div>
+        <div class="field">
+          <label>设置密码</label>
+          <div class="field-in">
+            <input id="reg-pass" type="password" placeholder="至少 6 位" />
+            <span class="eye" id="eyeBtn2" data-icon="eye" onclick="togglePwdReg()"></span>
+          </div>
+        </div>
+        <div class="field">
+          <label>确认密码</label>
+          <div class="field-in">
+            <input id="reg-pass2" type="password" placeholder="再次输入密码" />
+            <span class="eye" id="eyeBtn3" data-icon="eye" onclick="togglePwdReg2()"></span>
+          </div>
+        </div>
+        <button class="btn" style="width:100%;margin-top:6px" onclick="doRegister()">注册</button>
+        <p id="reg-msg" class="muted" style="color:var(--danger);min-height:18px;font-size:12px;margin-top:8px"></p>
+        <button class="btn ghost" style="width:100%;margin-top:6px" onclick="showLogin()">返回登录</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 主应用 ============ -->
+<div id="app" class="app" style="display:none">
+  <aside class="sidebar">
+    <div class="logo">
+      <div class="mark" data-icon="graduation-cap"></div>
+      <div><b>通识课 AI 平台</b><div class="sub" id="sidebarSub">学生端</div></div>
+    </div>
+    <nav class="nav" id="nav"></nav>
+    <div class="nav-card" id="aiCard">
+      <b>AI 互动课堂</b>
+      <div style="font-size:12px;color:var(--sidebar-text);margin-top:4px">接入 OpenMAIC 多智能体</div>
+      <button class="btn ai" style="width:100%;margin-top:9px;padding:8px" onclick="navigate('aichat')">进入对话</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div class="search"><span class="ic" data-icon="search"></span><input id="topSearch" placeholder="搜索课程、资料、讨论…" oninput="onSearch(this.value)" /></div>
+      <div class="top-actions">
+        <div class="bell" id="bellBtn" onclick="toggleNotify()"><span class="ic" data-icon="bell"></span><span class="dot"></span>
+          <div class="notify" id="notifyPanel"></div>
+        </div>
+        <div class="avatar-wrap">
+          <div class="avatar" id="topAvatar" style="cursor:pointer" onclick="toggleAvatarMenu()" title="账号"></div>
+          <div class="avatar-menu" id="avatarMenu">
+            <div class="who" id="menuWho"></div>
+            <div class="menu-item" onclick="openProfile()"><span class="ic" data-icon="user"></span> 账号管理</div>
+            <div class="menu-item" onclick="logout()"><span class="ic" data-icon="log-out"></span> 退出登录</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="content" id="view"></div>
+  </main>
+</div>
+
+<!-- ============ 账号管理弹窗 ============ -->
+<div class="modal-mask" id="profileMask" style="display:none">
+  <div class="modal">
+    <div class="modal-head">
+      <b>账号管理</b>
+      <span class="modal-close" onclick="closeProfile()" title="关闭">✕</span>
+    </div>
+    <div class="tabs" id="profileTabs">
+      <div class="tab cur" data-tab="info">基本资料</div>
+      <div class="tab" data-tab="nick">修改昵称</div>
+      <div class="tab" data-tab="avatar">修改头像</div>
+      <div class="tab" data-tab="pwd">修改密码</div>
+    </div>
+    <div class="tab-body" id="profileBody"></div>
+  </div>
+</div>
+
+<script src="icons.js"></script>
+<script src="data.js"></script>
+<script src="api.js"></script>
+<script src="app.js"></script>
+<script src="teacher.js"></script>
+</body>
+</html>

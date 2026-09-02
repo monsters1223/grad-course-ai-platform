@@ -673,3 +673,13 @@ option{padding:6px}
   .ai-fab{right:16px;bottom:16px;width:48px;height:48px}
 }
 
+/* ===== 班级群聊（renderChat，WebSocket） ===== */
+.chat-head .chat-room{font-family:var(--font-serif);font-weight:800}
+.chat-status{margin-left:auto;font-size:12px;font-weight:700;color:var(--text-3)}
+.chat-status.on{color:#16a34a}
+.chat-status.off{color:var(--danger)}
+.msg .m-name{font-size:11px;font-weight:700;opacity:.7;margin-bottom:3px}
+.msg .m-text{font-size:13px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+.msg .m-time{font-size:10px;opacity:.55;margin-top:4px;text-align:right}
+.msg.me .m-time{color:rgba(255,255,255,.85)}
+

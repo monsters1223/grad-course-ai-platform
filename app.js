@@ -75,19 +75,26 @@ function getAllUsers() {
   return USERS.concat(lsGet("reg_users", []));
 }
 
-/* ---------------- 登录 / 退出 ---------------- */
+/* ---------------- 登录 / 退出（已接入后端） ---------------- */
 async function doLogin() {
   const u = $("#li-user").value.trim();
   const p = $("#li-pass").value;
-  const user = getAllUsers().find((x) => x.username === u);
-  if (!user || !(await checkPass(u, p))) {
-    showErr("账号或密码错误");
-    return;
+  if (!u || !p) { showErr("请输入学号和密码"); return; }
+  try {
+    const data = await API.login(u, p);
+    setToken(data.token);
+    const u0 = data.user || {};
+    currentUser = {
+      id: u0.id, username: u0.username, name: u0.name || u0.username,
+      nickname: u0.name || u0.username, sid: u0.username,
+      major: "—", specialty: "", cls: "", contact: "", avatar: u0.avatar,
+      role: u0.role,
+    };
+    storeUser();
+    showApp({ replace: true });
+  } catch (e) {
+    showErr(e.message || "登录失败");
   }
-  const prof = getProfile(u);
-  currentUser = { username: user.username, name: prof.name || user.name || user.username, sid: user.studentId || user.username, major: prof.major || user.major || "—", specialty: prof.specialty || "", cls: prof.cls || "", contact: prof.contact || "", nickname: prof.nickname || prof.name || user.name || user.username };
-  storeUser();
-  showApp({ replace: true });
 }
 function showErr(m) {
   const e = $("#li-err");
@@ -121,20 +128,9 @@ function togglePwdReg2() {
   else { inp.type = "password"; eye.innerHTML = icon("eye"); }
 }
 async function doRegister() {
-  const sid = $("#reg-user").value.trim();
-  const p1 = $("#reg-pass").value;
-  const p2 = $("#reg-pass2").value;
   const msg = $("#reg-msg");
-  if (!/^\d{8}$/.test(sid)) { msg.style.color = "var(--danger)"; msg.textContent = "学号必须为 8 位数字"; return; }
-  if (p1.length < 6) { msg.style.color = "var(--danger)"; msg.textContent = "密码至少 6 位"; return; }
-  if (p1 !== p2) { msg.style.color = "var(--danger)"; msg.textContent = "两次输入的密码不一致"; return; }
-  if (getAllUsers().some((x) => x.username === sid)) { msg.style.color = "var(--danger)"; msg.textContent = "该学号已注册，请直接登录"; return; }
-  const hp = await hashPwd(p1);
-  const reg = lsGet("reg_users", []);
-  reg.push({ username: sid, password: hp, name: sid, studentId: sid, major: "—" });
-  lsSet("reg_users", reg);
-  msg.style.color = "var(--ok, #16a34a)";
-  msg.textContent = "✓ 注册成功，请点击下方返回登录";
+  msg.style.color = "var(--danger)";
+  msg.textContent = "本平台为校内封闭账号体系，账号由管理员统一下发，不支持自助注册。";
 }
 
 function showForgot() {
@@ -157,29 +153,14 @@ function togglePwdFg2() {
   else { inp.type = "password"; eye.innerHTML = icon("eye"); }
 }
 async function doForgot() {
-  const sid = $("#fg-user").value.trim();
-  const p1 = $("#fg-pass").value;
-  const p2 = $("#fg-pass2").value;
   const msg = $("#fg-msg");
-  if (!/^\d{8}$/.test(sid)) { msg.style.color = "var(--danger)"; msg.textContent = "学号必须为 8 位数字"; return; }
-  if (p1.length < 6) { msg.style.color = "var(--danger)"; msg.textContent = "密码至少 6 位"; return; }
-  if (p1 !== p2) { msg.style.color = "var(--danger)"; msg.textContent = "两次输入的密码不一致"; return; }
-  if (!getAllUsers().some((x) => x.username === sid)) { msg.style.color = "var(--danger)"; msg.textContent = "该学号尚未注册，请先注册"; return; }
-  const hp = await hashPwd(p1);
-  const reg = lsGet("reg_users", []);
-  const i = reg.findIndex((x) => x.username === sid);
-  if (i >= 0) { reg[i].password = hp; lsSet("reg_users", reg); }
-  else {
-    const ov = lsGet("pwd_override", {});
-    ov[sid] = hp; lsSet("pwd_override", ov);
-  }
-  msg.style.color = "var(--ok, #16a34a)";
-  msg.textContent = "✓ 密码已重置，请用新密码登录";
-  setTimeout(showLogin, 900);
+  msg.style.color = "var(--danger)";
+  msg.textContent = "请联系管理员重置密码。";
 }
 
 function logout() {
   localStorage.removeItem("static_user");
+  clearToken();
   currentUser = null;
   pages = {};
   activeNav = "home";
@@ -385,18 +366,8 @@ function saveInfo() {
   renderProfileTab("info");
 }
 async function savePwd() {
-  const oldP = $("#pw-old").value, newP = $("#pw-new").value, newP2 = $("#pw-new2").value;
   const msg = $("#pw-msg");
-  if (!(await checkPass(currentUser.username, oldP))) { msg.textContent = "当前密码错误"; return; }
-  if (newP.length < 6) { msg.textContent = "新密码至少 6 位"; return; }
-  if (newP !== newP2) { msg.textContent = "两次输入的新密码不一致"; return; }
-  const hp = await hashPwd(newP);
-  const reg = lsGet("reg_users", []);
-  const i = reg.findIndex((x) => x.username === currentUser.username);
-  if (i >= 0) { reg[i].password = hp; lsSet("reg_users", reg); }
-  else { const ov = lsGet("pwd_override", {}); ov[currentUser.username] = hp; lsSet("pwd_override", ov); }
-  msg.style.color = "var(--success)"; msg.textContent = "✓ 密码已修改";
-  $("#pw-old").value = ""; $("#pw-new").value = ""; $("#pw-new2").value = "";
+  msg.textContent = "修改密码请联系管理员处理。";
 }
 
 /* ---------------- 顶部通知 ---------------- */
@@ -490,6 +461,7 @@ const NAV = [
   { key: "aichat", ic: "bot", label: "AI 课堂" },
   { key: "dashboard", ic: "bar-chart", label: "学情看板" },
   { key: "signin", ic: "check-circle", label: "课堂签到" },
+  { key: "chat", ic: "message", label: "班级群聊" },
 ];
 
 function renderNav() {
@@ -526,6 +498,7 @@ function navigate(key, opts) {
   if (key === "home") renderHome(pages[key]);
   else if (key === "dashboard") renderDashboard(pages[key]);
   else if (key === "signin") renderSignin(pages[key]);
+  else if (key === "chat") renderChat(pages[key]);
   if (key === "learn") content.classList.add("learn-active");
   else content.classList.remove("learn-active");
 }
@@ -977,7 +950,8 @@ function nowHM() {
   return String(ts.getHours()).padStart(2, "0") + ":" + String(ts.getMinutes()).padStart(2, "0");
 }
 
-function renderDiscussion(panel, c) {
+/* ---------------- 课程讨论（已接入后端） ---------------- */
+async function renderDiscussion(panel, c) {
   const box = el("div", "chat-box");
   const collapseKey = "discuss_collapsed_" + c.id;
   let collapsed = lsGet(collapseKey, false);
@@ -990,12 +964,6 @@ function renderDiscussion(panel, c) {
 
   const body = el("div", "chat-body");
   const msgs = el("div", "chat-msgs");
-  const key = "discussions_" + c.id;
-  let list = lsGet(key, null);
-  if (!list) {
-    list = (c.discussions || []).map((m, i) => ({ ...m, ts: m.ts || "2026-09-0" + (i + 1) + " 09:1" + i, floor: i + 1 }));
-    lsSet(key, list);
-  }
 
   function applyCollapse() {
     if (collapsed) {
@@ -1011,48 +979,47 @@ function renderDiscussion(panel, c) {
     lsSet(collapseKey, collapsed);
   }
 
-  function paint() {
+  function paint(list) {
     msgs.innerHTML = "";
+    if (!list.length) msgs.appendChild(el("div", "muted", "还没有讨论，来发第一条吧～"));
     let floor = 0;
     list.forEach((m) => {
       floor++;
-      const isMe = m.user === currentUser.name;
-      const isAI = m.role === "ai";
-      const wrap = el("div", "chat-msg " + (isMe ? "me" : (isAI ? "ai" : "")));
+      const isMe = m.user === (currentUser && currentUser.name);
+      const wrap = el("div", "chat-msg " + (isMe ? "me" : ""));
       const meta = el("div", "meta");
-      const badge = isAI ? '<span class="badge-ai">AI 助教</span>' : (m.role === "teacher" ? '<span class="badge-teacher">教师</span>' : "");
-      meta.innerHTML = '<span style="font-weight:700">' + esc(m.user) + "</span>" + badge +
-        "<span>· " + (m.ts || "") + "</span><span>· #" + floor + "楼</span>";
+      meta.innerHTML = '<span style="font-weight:700">' + esc(m.user) + "</span>" +
+        "<span>· " + (m.created_at || "") + "</span><span>· #" + floor + "楼</span>";
       wrap.appendChild(meta);
       wrap.appendChild(el("div", null, m.content));
       msgs.appendChild(wrap);
     });
     msgs.scrollTop = msgs.scrollHeight;
   }
-  paint();
+
+  // 拉取真实讨论（后端）
+  let list = [];
+  try {
+    list = (await API.getDiscussions(c.id)) || [];
+  } catch (e) {
+    msgs.appendChild(el("div", "muted", "讨论加载失败：" + (e.message || "")));
+  }
+  paint(list);
 
   const input = el("div", "chat-input");
   const ipt = document.createElement("input");
-  ipt.placeholder = "向 AI 助教提问，将获得解答…";
-  const send = el("button", "btn ai", "发送");
+  ipt.placeholder = "写下你的观点，发布到课程讨论区…";
+  const send = el("button", "btn ai", "发布");
   send.onclick = async () => {
     const v = ipt.value.trim();
     if (!v) return;
     if (collapsed) { collapsed = false; applyCollapse(); }
-    list.push({ user: currentUser.name, role: "student", content: v, ts: "今天 " + nowHM(), floor: list.length + 1, openMAIC: false });
-    lsSet(key, list);
     ipt.value = "";
-    paint();
-    // 思考中占位
-    const thinking = el("div", "chat-msg ai");
-    thinking.innerHTML = '<div class="meta"><span style="font-weight:700">AI 助教</span></div><div class="typing"><span></span><span></span><span></span></div>';
-    msgs.appendChild(thinking);
-    msgs.scrollTop = msgs.scrollHeight;
-    const result = await getAIReply(v, c.title);
-    thinking.remove();
-    list.push({ user: "AI 助教", role: "ai", content: result.text, ts: "今天 " + nowHM(), floor: list.length + 1 });
-    lsSet(key, list);
-    paint();
+    try {
+      await API.postDiscussion(c.id, v);
+      list = (await API.getDiscussions(c.id)) || [];
+      paint(list);
+    } catch (e) { toast(e.message || "发布失败"); }
   };
   ipt.addEventListener("keydown", (e) => { if (e.key === "Enter") send.onclick(); });
   input.appendChild(ipt);
@@ -1112,6 +1079,24 @@ function renderAIChat(v) {
 }
 
 /* ---------------- 学情看板 ---------------- */
+// 后端拉取：作业提交状态 + 本人签到状态（进入看板时刷新）
+let HW_STATES = {};      // { cid: { title: { submitted, id } } }
+let SIGNIN_DONE = false;
+async function loadHWStates() {
+  if (!getToken()) return;
+  try {
+    const list = await API.getSignins();
+    SIGNIN_DONE = Array.isArray(list) && list.length > 0;
+  } catch (e) {}
+  for (const c of COURSES) {
+    try {
+      const hws = await API.getHomeworks(c.id);
+      const m = {};
+      (hws || []).forEach((h) => { m[h.title] = { submitted: !!h.submitted, id: h.id }; });
+      HW_STATES[c.id] = m;
+    } catch (e) {}
+  }
+}
 function getCourseStats(c) {
   const studyMin = NF(localStorage.getItem(uKey("studyMin", c.id))) || 0;
   const studyHours = +(studyMin / 60).toFixed(1);
@@ -1145,15 +1130,14 @@ function renderDashboard(v) {
   const studyHours = +(totalStudyMin / 60).toFixed(1);
   const avgVideo = totalVideoNum ? Math.round(totalVideoPct / totalVideoNum) : 0;
   const avgScore = totalScoreNum ? Math.round(totalScoreSum / totalScoreNum) : 0;
-  const signState = lsGet(uKey("signin_done"), null);
-  const signText = signState && signState.done ? "已签到" : "未签到";
+  const signText = SIGNIN_DONE ? "已签到" : "未签到";
 
   const stats = el("div", "stat-grid");
   [
     { ic: "clock", num: studyHours + " h", lbl: "累计学习时长", tip: "自 " + STUDY_START + " 起累计，以实际观看视频与完成测验时长计算。" },
     { ic: "video", num: avgVideo + "%", lbl: "视频平均完成度", tip: "当前三门通识课视频完成度的平均值；可点下方课程明细查看单科进度。" },
     { ic: "clipboard", num: avgScore || "—", lbl: "测验平均得分", tip: avgScore ? "已提交测验的平均分。" : "尚未提交任何测验，完成章节测验后将自动更新。" },
-    { ic: "check-circle", num: signText, lbl: "签到记录", tip: signState && signState.done ? "上次签到时间：" + signState.time : "今日尚未签到，请前往课堂签到。" },
+    { ic: "check-circle", num: signText, lbl: "签到记录", tip: SIGNIN_DONE ? "你已签到，详情见课堂签到页。" : "今日尚未签到，请前往课堂签到。" },
   ].forEach((s) => {
     const card = el("div", "stat");
     const ic = el("div", "ic"); ic.style.background = "var(--primary-soft)"; ic.style.color = "var(--primary-deep)"; ic.innerHTML = icon(s.ic, 22);
@@ -1176,10 +1160,10 @@ function renderDashboard(v) {
     const st = getCourseStats(c);
     if (st.videoProg < 100) tasks.push({ type: "video", text: "完成「" + c.title + "」视频学习（当前 " + st.videoProg + "%）", cid: c.id });
     if (st.totalQuiz && st.quizCount < st.totalQuiz) tasks.push({ type: "quiz", text: "完成「" + c.title + "」剩余章节测验", cid: c.id });
-    const hwState = lsGet(uKey("hw", c.id), {}) || {};
+    const hwState = HW_STATES[c.id] || {};
     (c.homeworks || []).forEach((hw) => {
-      if (hwState[hw.title]) {
-        tasks.push({ type: "hw-done", text: "已提交作业：「" + hw.title + "」", cid: c.id, hwTitle: hw.title, at: hwState[hw.title].at });
+      if (hwState[hw.title] && hwState[hw.title].submitted) {
+        tasks.push({ type: "hw-done", text: "已提交作业：「" + hw.title + "」", cid: c.id, hwTitle: hw.title });
       } else {
         tasks.push({ type: "hw", text: "待提交作业：「" + hw.title + "」" + (hw.due ? "（截止 " + hw.due + "）" : ""), cid: c.id, hwTitle: hw.title });
       }
@@ -1252,51 +1236,41 @@ function renderDashboard(v) {
   });
   chartCard.appendChild(bars);
   v.appendChild(chartCard);
+
+  // 异步刷新作业/签到真实状态（后端）
+  loadHWStates().then(() => { if (pages.dashboard === v) renderDashboard(pages.dashboard); });
 }
 
-// 作业提交状态（按用户隔离，纯前端演示：标记/撤销本地记录）
-function markHomework(cid, title) {
+// 作业提交（已接入后端：提交到 /api/homeworks/submit，状态从后端读取）
+async function markHomework(cid, title) {
   if (!title) return;
-  const m = lsGet(uKey("hw", cid), {}) || {};
-  m[title] = { at: new Date().toISOString() };
-  lsSet(uKey("hw", cid), m);
-  if (pages.dashboard) renderDashboard(pages.dashboard);
-  toast("已标记为提交：「" + title + "」");
+  try {
+    const hws = await API.getHomeworks(cid);
+    const hw = (hws || []).find((h) => h.title === title);
+    if (!hw) { toast("未找到对应作业：「" + title + "」"); return; }
+    await API.submitHomework(hw.id, "");
+    toast("已提交作业：「" + title + "」");
+    await loadHWStates();
+    if (pages.dashboard) renderDashboard(pages.dashboard);
+  } catch (e) { toast(e.message || "提交失败"); }
 }
-function unmarkHomework(cid, title) {
-  if (!title) return;
-  const m = lsGet(uKey("hw", cid), {}) || {};
-  delete m[title];
-  lsSet(uKey("hw", cid), m);
-  if (pages.dashboard) renderDashboard(pages.dashboard);
-  toast("已撤销提交：「" + title + "」");
+function unmarkHomework() {
+  toast("后端暂不支持撤销提交");
 }
 
-/* ---------------- 课堂签到 ---------------- */
-function renderSignin(v) {
+/* ---------------- 课堂签到（已接入后端） ---------------- */
+async function renderSignin(v) {
   v.innerHTML = "";
   v.appendChild(el("div", "h-title", "课堂签到"));
   v.appendChild(el("p", "h-sub", "线下课程定位签到 / 扫码签到"));
 
-  const signState = lsGet(uKey("signin_done"), null);
+  const SIGNIN_COURSE_ID = 1; // 对应「数据科学导论」（后端课程 id，按实际调整）
 
   const card = el("div", "signin-task");
   const left = el("div");
   left.appendChild(el("div", "st-course", "数据科学导论 · 第 5 讲"));
   left.appendChild(el("div", "muted", "签到时间：2026-09-15 10:00 - 10:15"));
-  const btn = el("button", signState && signState.done ? "btn ai" : "btn", signState && signState.done ? "✅ 已签到" : "立即签到");
-  if (signState && signState.done) btn.disabled = true;
-  btn.onclick = () => {
-    if (signState && signState.done) return;
-    const now = new Date();
-    const t = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0") + "-" + String(now.getDate()).padStart(2,"0") + " " + String(now.getHours()).padStart(2,"0") + ":" + String(now.getMinutes()).padStart(2,"0");
-    lsSet(uKey("signin_done"), { done: true, time: t });
-    btn.textContent = "✅ 已签到";
-    btn.className = "btn ai";
-    btn.disabled = true;
-    card.style.background = "linear-gradient(120deg,var(--ai-soft),var(--accent-soft))";
-    toast("签到成功，已记录于「数据科学导论」");
-  };
+  const btn = el("button", "btn", "立即签到");
   card.appendChild(left);
   card.appendChild(btn);
   v.appendChild(card);
@@ -1307,6 +1281,103 @@ function renderSignin(v) {
     '<div class="sp-info">定位签到需授权浏览器位置；或请教师出示课堂二维码进行扫码签到。</div>';
   v.appendChild(panel);
   initIcons(panel);
+
+  // 拉取本人签到记录（后端）
+  let done = false;
+  try {
+    const list = await API.getSignins();
+    done = Array.isArray(list) && list.length > 0;
+  } catch (e) { /* 拉取失败按未签到处理 */ }
+  if (done) { btn.textContent = "✅ 已签到"; btn.className = "btn ai"; btn.disabled = true; }
+
+  btn.onclick = async () => {
+    if (done) return;
+    try {
+      await API.postSignin(SIGNIN_COURSE_ID, "location");
+      done = true;
+      btn.textContent = "✅ 已签到";
+      btn.className = "btn ai";
+      btn.disabled = true;
+      card.style.background = "linear-gradient(120deg,var(--ai-soft),var(--accent-soft))";
+      toast("签到成功，已记录于「数据科学导论」");
+      if (pages.dashboard) renderDashboard(pages.dashboard);
+    } catch (e) { toast(e.message || "签到失败"); }
+  };
+}
+
+/* ---------------- 班级群聊（WebSocket，已接入后端） ---------------- */
+let chatWs = null; // 页面级单例，避免反复进入时叠加多个连接
+function renderChat(v) {
+  v.innerHTML = "";
+  v.appendChild(el("div", "h-title", "班级群聊"));
+  v.appendChild(el("p", "h-sub", "与同学实时交流（WebSocket 实时消息）"));
+
+  const CHAT_ROOM_ID = 1; // 后端群聊房间 id，按实际调整
+
+  const box = el("div", "chat-box");
+  const head = el("div", "chat-head");
+  head.appendChild(el("span", "chat-room", "研究生通识课 · 班级群"));
+  const status = el("span", "chat-status", "连接中…");
+  head.appendChild(status);
+  box.appendChild(head);
+
+  const msgs = el("div", "chat-msgs");
+  box.appendChild(msgs);
+
+  const bar = el("div", "chat-input");
+  const input = el("input", "chat-inp");
+  input.type = "text";
+  input.placeholder = "说点什么…";
+  const sendBtn = el("button", "btn", "发送");
+  bar.appendChild(input);
+  bar.appendChild(sendBtn);
+  box.appendChild(bar);
+  v.appendChild(box);
+
+  function appendMsg(m, mine) {
+    const row = el("div", "msg" + (mine ? " me" : " ai"));
+    if (!mine && m.user) row.appendChild(el("div", "m-name", m.user));
+    row.appendChild(el("div", "m-text", m.content || ""));
+    if (m.created_at) row.appendChild(el("div", "m-time", m.created_at));
+    msgs.appendChild(row);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+
+  appendMsg({ user: "系统", content: "已连接到班级群聊，开始实时收发消息（历史消息由后端留存）" }, false);
+
+  if (chatWs) { try { chatWs.close(); } catch (e) {} }
+  function connect() {
+    try {
+      chatWs = new WebSocket(API.chatWsUrl(CHAT_ROOM_ID));
+    } catch (e) {
+      status.textContent = "连接失败";
+      status.className = "chat-status off";
+      return;
+    }
+    chatWs.onopen = () => { status.textContent = "● 已连接"; status.className = "chat-status on"; };
+    chatWs.onmessage = (ev) => {
+      let data; try { data = JSON.parse(ev.data); } catch (e) { return; }
+      if (!data || !data.content) return;
+      const mine = !!(currentUser && data.user === currentUser.name);
+      appendMsg(data, mine);
+    };
+    chatWs.onclose = () => { status.textContent = "○ 已断开"; status.className = "chat-status off"; };
+    chatWs.onerror = () => { status.textContent = "连接异常"; status.className = "chat-status off"; };
+  }
+  connect();
+
+  function doSend() {
+    const txt = input.value.trim();
+    if (!txt) return;
+    if (!chatWs || chatWs.readyState !== WebSocket.OPEN) {
+      toast("群聊未连接，请稍候重试");
+      return;
+    }
+    chatWs.send(JSON.stringify({ mtype: "text", content: txt }));
+    input.value = "";
+  }
+  sendBtn.onclick = doSend;
+  input.addEventListener("keydown", (e) => { if (e.key === "Enter") doSend(); });
 }
 
 /* ---------------- 悬浮 AI 助手 ---------------- */

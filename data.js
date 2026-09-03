@@ -108,7 +108,88 @@ const VIDEO_LINKS = {
 
 // 课程数据
 const COURSES = [
-  {
+{
+    id: 1,
+    title: "数据科学导论",
+    teacher: "李教授 · 计算机学院",
+    coverColor: "#A99CF5",
+    coverText: "数",
+    category: "理工通识",
+    desc: "从数据思维到机器学习基础，建立跨学科的数据分析能力。",
+    sections: [
+      { stype: "video", title: "第1章 数据思维与问题定义", content: "", recs: [
+        { title: "什么是数据思维：从业务问题到数据问题", url: "https://search.bilibili.com/all?keyword=数据思维%20业务问题", source: "Bilibili" },
+        { title: "数据科学项目流程全解析", url: "https://search.bilibili.com/all?keyword=数据科学项目流程", source: "Bilibili" },
+      ]},
+      { stype: "video", title: "第2章 探索性数据分析", content: "assets/ch2.mp4", recs: [
+        { title: "EDA 探索性数据分析实战（Python）", url: "https://search.bilibili.com/all?keyword=EDA%20探索性数据分析%20Python", source: "Bilibili" },
+        { title: "数据清洗与特征工程入门", url: "https://search.bilibili.com/all?keyword=数据清洗%20特征工程", source: "Bilibili" },
+      ]},
+      { stype: "doc", title: "第1章课件·数据思维", content: "assets/slide1.html" },
+      { stype: "quiz", title: "章节测验 1", questions: [
+        { q: "数据科学的核心目标是什么？", options: ["收集最多数据", "从数据中提取洞见并支持决策", "制作精美图表", "编写最多代码"], answer: 1, explanation: "数据科学的核心是从数据中提取洞见并支持决策。" },
+        { q: "EDA 是指？", options: ["探索性数据分析", "工程数据分析", "增强数据分析", "电子数据分析"], answer: 0, explanation: "EDA = Exploratory Data Analysis，探索性数据分析。" },
+        { q: "过拟合的典型表现是？", options: ["训练集差测试集差", "训练集好测试集差", "训练集差测试集好", "训练集和测试集一样差"], answer: 1, explanation: "过拟合指模型在训练集上表现好，但在新数据上表现差。" },
+        { q: "数据伦理不包括以下哪项？", options: ["隐私保护", "算法公平", "数据安全", "数据越多越好"], answer: 3, explanation: "数据伦理关注隐私、公平、安全，而非单纯追求数据量。" },
+        { q: "特征工程的主要作用是？", options: ["让模型更容易学习有效模式", "减少训练时间", "增加数据量", "替代模型训练"], answer: 0, explanation: "特征工程通过构造有效特征帮助模型学习。" },
+      ]},
+    ],
+    discussions: [],
+    homeworks: [
+      { title: "作业1：数据清洗实践", desc: "使用提供的数据集完成清洗并提交报告。", due: "2026-10-05" },
+    ],
+    analytics: { studyHours: 0, videoProgress: 0, avgScore: 0, weekly: [
+      { label: "周一", val: 0 },
+      { label: "周二", val: 0 },
+      { label: "周三", val: 0 },
+      { label: "周四", val: 0 },
+      { label: "周五", val: 0 },
+      { label: "周六", val: 0 },
+      { label: "周日", val: 0 },
+    ] },
+  },
+{
+    id: 2,
+    title: "科技伦理与人工智能",
+    teacher: "王老师 · 马克思主义学院",
+    coverColor: "#62CBA0",
+    coverText: "工",
+    category: "理工通识",
+    desc: "从真实工程事故出发，理解工程师的伦理责任与决策框架。",
+    sections: [
+      { stype: "video", title: "第1章 工程伦理导论", content: "assets/ch1.mp4", recs: [
+        { title: "工程伦理导论：公众安全与职业责任", url: "https://search.bilibili.com/all?keyword=工程伦理%20公众安全%20职业责任", source: "Bilibili" },
+        { title: "工程师伦理准则与职业行为规范", url: "https://search.bilibili.com/all?keyword=工程师%20伦理准则", source: "Bilibili" },
+      ]},
+      { stype: "doc", title: "第1章课件·伦理决策框架", content: "assets/slide1.html" },
+      { stype: "quiz", title: "章节测验 1", questions: [
+        { q: "工程师的首要责任对象通常是？", options: ["雇主利益", "公众安全与健康", "个人声誉", "项目利润"], answer: 1, explanation: "工程伦理强调公众安全与健康优先。" },
+        { q: "自动驾驶中的“电车难题”主要用于讨论什么？", options: ["算法效率", "伦理决策", "车辆外观设计", "电池续航"], answer: 1, explanation: "电车难题式情境常用于讨论自动驾驶的伦理决策。" },
+        { q: "Whistleblowing 在工程伦理中通常指？", options: ["举报不当行为", "加班赶工", "技术创新", "市场推广"], answer: 0, explanation: "Whistleblowing 指揭露组织内不道德或违法行为。" },
+        { q: "伦理决策时应当？", options: ["只考虑技术可行性", "综合多方利益与价值", "只听雇主意见", "回避公众意见"], answer: 1, explanation: "伦理决策需要综合技术、利益相关者与价值判断。" },
+        { q: "数据隐私保护的基本原则之一是？", options: ["数据最小化", "数据最大化", "无限制共享", "永不删除"], answer: 0, explanation: "数据最小化原则：只收集必要数据。" },
+      ]},
+    ],
+    discussions: [
+      { user: "林深夜", role: "student", content: "老师，自动驾驶的“电车难题”在工程中真的需要工程师决策吗？", ts: "2026-09-12 15:30" },
+    ],
+    homeworks: [],
+    analytics: {
+      studyHours: 8,
+      videoProgress: 60,
+      avgScore: 92,
+      weekly: [
+        { label: "周一", val: 20 },
+        { label: "周二", val: 35 },
+        { label: "周三", val: 50 },
+        { label: "周四", val: 30 },
+        { label: "周五", val: 65 },
+        { label: "周六", val: 40 },
+        { label: "周日", val: 25 },
+      ],
+    },
+  },
+{
     id: 3,
     title: "学术写作与规范",
     teacher: "王怀安 · 人文学院",
@@ -165,86 +246,5 @@ const COURSES = [
         { label: "周日", val: 45 },
       ],
     },
-  },
-  {
-    id: 1,
-    title: "数据科学导论",
-    teacher: "李教授 · 计算机学院",
-    coverColor: "#A99CF5",
-    coverText: "数",
-    category: "理工通识",
-    desc: "从数据思维到机器学习基础，建立跨学科的数据分析能力。",
-    sections: [
-      { stype: "video", title: "第1章 数据思维与问题定义", content: "", recs: [
-        { title: "什么是数据思维：从业务问题到数据问题", url: "https://search.bilibili.com/all?keyword=数据思维%20业务问题", source: "Bilibili" },
-        { title: "数据科学项目流程全解析", url: "https://search.bilibili.com/all?keyword=数据科学项目流程", source: "Bilibili" },
-      ]},
-      { stype: "video", title: "第2章 探索性数据分析", content: "assets/ch2.mp4", recs: [
-        { title: "EDA 探索性数据分析实战（Python）", url: "https://search.bilibili.com/all?keyword=EDA%20探索性数据分析%20Python", source: "Bilibili" },
-        { title: "数据清洗与特征工程入门", url: "https://search.bilibili.com/all?keyword=数据清洗%20特征工程", source: "Bilibili" },
-      ]},
-      { stype: "doc", title: "第1章课件·数据思维", content: "assets/slide1.html" },
-      { stype: "quiz", title: "章节测验 1", questions: [
-        { q: "数据科学的核心目标是什么？", options: ["收集最多数据", "从数据中提取洞见并支持决策", "制作精美图表", "编写最多代码"], answer: 1, explanation: "数据科学的核心是从数据中提取洞见并支持决策。" },
-        { q: "EDA 是指？", options: ["探索性数据分析", "工程数据分析", "增强数据分析", "电子数据分析"], answer: 0, explanation: "EDA = Exploratory Data Analysis，探索性数据分析。" },
-        { q: "过拟合的典型表现是？", options: ["训练集差测试集差", "训练集好测试集差", "训练集差测试集好", "训练集和测试集一样差"], answer: 1, explanation: "过拟合指模型在训练集上表现好，但在新数据上表现差。" },
-        { q: "数据伦理不包括以下哪项？", options: ["隐私保护", "算法公平", "数据安全", "数据越多越好"], answer: 3, explanation: "数据伦理关注隐私、公平、安全，而非单纯追求数据量。" },
-        { q: "特征工程的主要作用是？", options: ["让模型更容易学习有效模式", "减少训练时间", "增加数据量", "替代模型训练"], answer: 0, explanation: "特征工程通过构造有效特征帮助模型学习。" },
-      ]},
-    ],
-    discussions: [],
-    homeworks: [
-      { title: "作业1：数据清洗实践", desc: "使用提供的数据集完成清洗并提交报告。", due: "2026-10-05" },
-    ],
-    analytics: { studyHours: 0, videoProgress: 0, avgScore: 0, weekly: [
-      { label: "周一", val: 0 },
-      { label: "周二", val: 0 },
-      { label: "周三", val: 0 },
-      { label: "周四", val: 0 },
-      { label: "周五", val: 0 },
-      { label: "周六", val: 0 },
-      { label: "周日", val: 0 },
-    ] },
-  },
-  {
-    id: 2,
-    title: "科技伦理与人工智能",
-    teacher: "王老师 · 马克思主义学院",
-    coverColor: "#62CBA0",
-    coverText: "工",
-    category: "理工通识",
-    desc: "从真实工程事故出发，理解工程师的伦理责任与决策框架。",
-    sections: [
-      { stype: "video", title: "第1章 工程伦理导论", content: "assets/ch1.mp4", recs: [
-        { title: "工程伦理导论：公众安全与职业责任", url: "https://search.bilibili.com/all?keyword=工程伦理%20公众安全%20职业责任", source: "Bilibili" },
-        { title: "工程师伦理准则与职业行为规范", url: "https://search.bilibili.com/all?keyword=工程师%20伦理准则", source: "Bilibili" },
-      ]},
-      { stype: "doc", title: "第1章课件·伦理决策框架", content: "assets/slide1.html" },
-      { stype: "quiz", title: "章节测验 1", questions: [
-        { q: "工程师的首要责任对象通常是？", options: ["雇主利益", "公众安全与健康", "个人声誉", "项目利润"], answer: 1, explanation: "工程伦理强调公众安全与健康优先。" },
-        { q: "自动驾驶中的“电车难题”主要用于讨论什么？", options: ["算法效率", "伦理决策", "车辆外观设计", "电池续航"], answer: 1, explanation: "电车难题式情境常用于讨论自动驾驶的伦理决策。" },
-        { q: "Whistleblowing 在工程伦理中通常指？", options: ["举报不当行为", "加班赶工", "技术创新", "市场推广"], answer: 0, explanation: "Whistleblowing 指揭露组织内不道德或违法行为。" },
-        { q: "伦理决策时应当？", options: ["只考虑技术可行性", "综合多方利益与价值", "只听雇主意见", "回避公众意见"], answer: 1, explanation: "伦理决策需要综合技术、利益相关者与价值判断。" },
-        { q: "数据隐私保护的基本原则之一是？", options: ["数据最小化", "数据最大化", "无限制共享", "永不删除"], answer: 0, explanation: "数据最小化原则：只收集必要数据。" },
-      ]},
-    ],
-    discussions: [
-      { user: "林深夜", role: "student", content: "老师，自动驾驶的“电车难题”在工程中真的需要工程师决策吗？", ts: "2026-09-12 15:30" },
-    ],
-    homeworks: [],
-    analytics: {
-      studyHours: 8,
-      videoProgress: 60,
-      avgScore: 92,
-      weekly: [
-        { label: "周一", val: 20 },
-        { label: "周二", val: 35 },
-        { label: "周三", val: 50 },
-        { label: "周四", val: 30 },
-        { label: "周五", val: 65 },
-        { label: "周六", val: 40 },
-        { label: "周日", val: 25 },
-      ],
-    },
-  },
+  }
 ];

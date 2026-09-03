@@ -524,7 +524,7 @@ function navigate(key, opts) {
   pages[key].style.display = "block";
   // 数据页每次进入都重新读取本地记录，保证学情/进度/签到实时同步
   if (key === "home") renderHome(pages[key]);
-  else if (key === "dashboard") renderDashboard(pages[key]);
+  else if (key === "dashboard") { HW_STATES_LOADED = false; renderDashboard(pages[key]); }
   else if (key === "signin") renderSignin(pages[key]);
   else if (key === "chat") renderChat(pages[key]);
   else if (key === "groups") renderGroups(pages[key]);
@@ -694,6 +694,11 @@ function renderLearn(v, c, targetTab) {
     video.controls = true;
     video.style.cssText = "width:100%;display:block;max-height:420px;background:#000";
     video.src = s.content;
+    // 节流基准改为「本次播放会话」的闭包变量：
+    // 原实现存 localStorage 且按课程（不按章节），换视频/重开会话后 currentTime 归零，
+    // 而旧的 lastRep 仍是上一次播放的高水位 → 新视频若短于 (lastRep+阈值) 则永远不触发上报。
+    let lastRep = -10;     // 心跳阈值 10 秒（演示视频约 10 秒长，原 20 秒阈值对短视频失效）
+    let lastTick = 0;      // 学习时长累计节流（每满 60 秒记 1 分钟）
     video.addEventListener("timeupdate", () => {
       if (!video.duration) return;
       const ratio = Math.min(100, Math.round((video.currentTime / video.duration) * 100));
@@ -701,23 +706,19 @@ function renderLearn(v, c, targetTab) {
       const prev = NF(localStorage.getItem(key)) || 0;
       if (ratio > prev) { localStorage.setItem(key, ratio); refreshProgressLabel(c, ratio); }
       // 累计学习时长（每播放满 60 秒记 1 分钟），按用户隔离
-      const tickKey = uKey("studyTick", c.id);
-      const lastTick = NF(localStorage.getItem(tickKey)) || 0;
       if (video.currentTime - lastTick >= 60) {
         const studyKey = uKey("studyMin", c.id);
         localStorage.setItem(studyKey, (NF(localStorage.getItem(studyKey)) || 0) + 1);
-        localStorage.setItem(tickKey, video.currentTime);
+        lastTick = video.currentTime;
         // 写入「今日学习分钟」，用于学情看板「本周学习时长」
         const dlog = lsGet(uKey("studyDaily"), {}) || {};
         const today = new Date().toISOString().slice(0, 10);
         dlog[today] = (dlog[today] || 0) + 1;
         lsSet(uKey("studyDaily"), dlog);
       }
-      // 阶段二：每 20 秒向后端上报一次视频进度（best-effort，失败不阻塞）
-      const repKey = uKey("reportTick", c.id);
-      const lastRep = NF(localStorage.getItem(repKey)) || 0;
-      if (video.currentTime - lastRep >= 20) {
-        localStorage.setItem(repKey, video.currentTime);
+      // 阶段二：每 10 秒向后端上报一次视频进度（best-effort，失败不阻塞）
+      if (video.currentTime - lastRep >= 10) {
+        lastRep = video.currentTime;
         try {
           API.reportVideo(c.id, sectionIndex, sectionTitle, ratio, Math.round(video.currentTime))
             .then(() => { DASH_BACKEND = null; }).catch(() => {});
@@ -1191,6 +1192,7 @@ function renderAIChat(v) {
 // 后端拉取：作业提交状态 + 本人签到状态（进入看板时刷新）
 let HW_STATES = {};      // { cid: { title: { submitted, id } } }
 let SIGNIN_DONE = false;
+let HW_STATES_LOADED = false;   // 防止看板异步回填触发无限重渲染循环
 async function loadHWStates() {
   if (!getToken()) return;
   try {
@@ -1370,8 +1372,15 @@ function renderDashboard(v) {
   chartCard.appendChild(bars);
   v.appendChild(chartCard);
 
-  // 异步刷新作业/签到真实状态（后端）
-  loadHWStates().then(() => { if (pages.dashboard === v) renderDashboard(pages.dashboard); });
+  // 异步刷新作业/签到真实状态（后端）。
+  // ⚠ 只允许「主动进入看板」触发一次异步回填：若无条件链式重渲染，
+  // renderDashboard → loadHWStates().then(renderDashboard) 会无限自我递归，
+  // 页面永不停歇地重建 DOM（按钮刚建好就被销毁 → 点击"去做"无反应），
+  // 同时对后端发起请求风暴。HW_STATES_LOADED 由 navigate() 在进入看板时重置。
+  if (!HW_STATES_LOADED) {
+    HW_STATES_LOADED = true;
+    loadHWStates().then(() => { if (pages.dashboard === v) renderDashboard(pages.dashboard); });
+  }
 }
 
 // 作业提交（已接入后端：提交到 /api/homeworks/submit，状态从后端读取）

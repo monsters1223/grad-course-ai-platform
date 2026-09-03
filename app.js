@@ -23,6 +23,14 @@ let pages = {}; // SPA 页面缓存
 let popHandling = false;
 let aiChatOpen = false;
 
+// 阶段二：学情真实化所需的全局状态
+let ACTIVE_VIDEO = null;       // 当前正在播放的 <video>
+let ACTIVE_COURSE = null;      // 当前课程对象
+let ACTIVE_SECTION = -1;       // 当前章节在课程 sections 中的序号
+let ACTIVE_SECTION_TITLE = "";
+let DASH_BACKEND = null;       // 后端看板聚合结果（优先于 localStorage 兜底）
+let _progressReportBound = false;
+
 const STUDY_START = "2026-09-01";
 
 /* ---------------- 图标初始化 ---------------- */
@@ -75,6 +83,24 @@ function getAllUsers() {
   return USERS.concat(lsGet("reg_users", []));
 }
 
+/* ---------------- 阶段二：学情上报兜底（关页/切后台补报最后进度） ---------------- */
+function bindProgressReportFallback() {
+  if (_progressReportBound) return;
+  _progressReportBound = true;
+  const flush = () => {
+    if (ACTIVE_VIDEO && ACTIVE_COURSE && ACTIVE_VIDEO.duration) {
+      const ratio = Math.min(100, Math.round((ACTIVE_VIDEO.currentTime / ACTIVE_VIDEO.duration) * 100));
+      try {
+        API.reportVideo(ACTIVE_COURSE.id, ACTIVE_SECTION, ACTIVE_SECTION_TITLE, ratio, Math.round(ACTIVE_VIDEO.currentTime)).catch(() => {});
+      } catch (e) {}
+    }
+  };
+  window.addEventListener("pagehide", flush);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flush();
+  });
+}
+
 /* ---------------- 登录 / 退出（已接入后端） ---------------- */
 async function doLogin() {
   const u = $("#li-user").value.trim();
@@ -91,6 +117,7 @@ async function doLogin() {
       role: u0.role,
     };
     storeUser();
+    bindProgressReportFallback();
     showApp({ replace: true });
   } catch (e) {
     showErr(e.message || "登录失败");
@@ -660,6 +687,8 @@ function renderLearn(v, c, targetTab) {
   function startVideo(s) {
     if (!s) return;
     currentVideo = s;
+    const sectionIndex = c.sections.indexOf(s);
+    const sectionTitle = s.title || "";
     player.innerHTML = "";
     const video = document.createElement("video");
     video.controls = true;
@@ -684,7 +713,22 @@ function renderLearn(v, c, targetTab) {
         dlog[today] = (dlog[today] || 0) + 1;
         lsSet(uKey("studyDaily"), dlog);
       }
+      // 阶段二：每 20 秒向后端上报一次视频进度（best-effort，失败不阻塞）
+      const repKey = uKey("reportTick", c.id);
+      const lastRep = NF(localStorage.getItem(repKey)) || 0;
+      if (video.currentTime - lastRep >= 20) {
+        localStorage.setItem(repKey, video.currentTime);
+        try {
+          API.reportVideo(c.id, sectionIndex, sectionTitle, ratio, Math.round(video.currentTime))
+            .then(() => { DASH_BACKEND = null; }).catch(() => {});
+        } catch (e) {}
+      }
     });
+    // 阶段二：记录当前活动视频，供关页/切后台时补报最后进度
+    ACTIVE_VIDEO = video;
+    ACTIVE_COURSE = c;
+    ACTIVE_SECTION = sectionIndex;
+    ACTIVE_SECTION_TITLE = sectionTitle;
     player.appendChild(video);
     video.play().catch(() => {});
   }
@@ -950,6 +994,11 @@ function renderQuizPanel(panel, c) {
         if (val === q.answer) score++;
       });
       lsSet(quizKey(c, qIdx), { submitted: true, score: score, total: quiz.questions.length, answers: answers, at: new Date().toISOString() });
+      // 阶段二：后台上报测验成绩到后端（不阻塞 UI）；置空看板缓存以触发下次刷新
+      try {
+        API.reportQuiz(c.id, qIdx, quiz.title, score, quiz.questions.length)
+          .then(() => { DASH_BACKEND = null; }).catch(() => {});
+      } catch (e) {}
       if (pages.dashboard) renderDashboard(pages.dashboard);
       renderQuizPanel(panel, c);
       toast("测验已提交，得分 " + score + "/" + quiz.questions.length);
@@ -1158,22 +1207,39 @@ async function loadHWStates() {
   }
 }
 function getCourseStats(c) {
-  const studyMin = NF(localStorage.getItem(uKey("studyMin", c.id))) || 0;
-  const studyHours = +(studyMin / 60).toFixed(1);
-  const videoProg = NF(localStorage.getItem(uKey("progress", c.id))) || 0;
-  // 测验平均分
   const quizzes = (c.sections || []).filter((s) => s.stype === "quiz");
-  let quizScore = 0, quizCount = 0;
-  quizzes.forEach((q, i) => {
-    const s = lsGet(quizKey(c, i), null);
-    if (s && s.submitted) { quizScore += s.score; quizCount++; }
-  });
-  const avgScore = quizCount ? Math.round(quizScore / quizCount) : 0;
+  // 阶段二：优先用后端真实聚合，缺失时回退 localStorage 兜底
+  const be = (DASH_BACKEND && DASH_BACKEND.course_details)
+    ? DASH_BACKEND.course_details.find((d) => d.course_id === c.id) : null;
+  const studyMin = NF(localStorage.getItem(uKey("studyMin", c.id))) || 0;
+  const studyHours = (be && be.study_hours != null) ? be.study_hours : +(studyMin / 60).toFixed(1);
+  const videoProg = (be && be.video_progress != null) ? be.video_progress
+    : (NF(localStorage.getItem(uKey("progress", c.id))) || 0);
+  let quizCount = 0, avgScore = 0;
+  if (be && be.quiz_done) {
+    quizCount = be.quiz_done;
+    avgScore = be.quiz_avg || 0;
+  } else {
+    let quizScore = 0;
+    quizzes.forEach((q, i) => {
+      const s = lsGet(quizKey(c, i), null);
+      if (s && s.submitted) { quizScore += s.score; quizCount++; }
+    });
+    avgScore = quizCount ? Math.round(quizScore / quizCount) : 0;
+  }
   return { studyHours, videoProg, avgScore, quizCount, totalQuiz: quizzes.length };
 }
 
 function renderDashboard(v) {
   v.innerHTML = "";
+  // 阶段二：首次进入看板时从后端拉取真实聚合（覆盖 localStorage 兜底）；
+  // DASH_BACKEND 非空后不再重复请求，避免递归刷屏。上报动作会将其置空以触发下次刷新。
+  if (!DASH_BACKEND) {
+    API.getDashboard().then((d) => {
+      DASH_BACKEND = d;
+      if (pages.dashboard === v) renderDashboard(pages.dashboard);
+    }).catch(() => {});
+  }
   v.appendChild(el("div", "h-title", "学情看板"));
   v.appendChild(el("p", "h-sub", currentUser.name + " · " + currentUser.major + " · 学习概览"));
 
@@ -1190,7 +1256,8 @@ function renderDashboard(v) {
   const studyHours = +(totalStudyMin / 60).toFixed(1);
   const avgVideo = totalVideoNum ? Math.round(totalVideoPct / totalVideoNum) : 0;
   const avgScore = totalScoreNum ? Math.round(totalScoreSum / totalScoreNum) : 0;
-  const signText = SIGNIN_DONE ? "已签到" : "未签到";
+  const signCount = (DASH_BACKEND && DASH_BACKEND.signin_count) ? DASH_BACKEND.signin_count : (SIGNIN_DONE ? 1 : 0);
+  const signText = signCount > 0 ? "已签到" : "未签到";
 
   const stats = el("div", "stat-grid");
   [
@@ -1276,15 +1343,20 @@ function renderDashboard(v) {
   // 本周学习时长
   const chartCard = el("div", "chart-card");
   chartCard.appendChild(el("div", "h-title2", "本周学习时长（分钟）"));
-  // 本周学习时长：取最近 7 天真实学习分钟（按用户累计，开始学习后才会有数据）
-  const dlog = lsGet(uKey("studyDaily"), {}) || {};
-  const wd = ["日", "一", "二", "三", "四", "五", "六"];
-  const weekly = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const k = d.toISOString().slice(0, 10);
-    weekly.push({ label: "周" + wd[d.getDay()], val: dlog[k] || 0 });
+  // 本周学习时长：后端真实聚合优先，缺失时回退本地 studyDaily
+  let weekly;
+  if (DASH_BACKEND && DASH_BACKEND.weekly && DASH_BACKEND.weekly.length) {
+    weekly = DASH_BACKEND.weekly;
+  } else {
+    const dlog = lsGet(uKey("studyDaily"), {}) || {};
+    const wd = ["日", "一", "二", "三", "四", "五", "六"];
+    weekly = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const k = d.toISOString().slice(0, 10);
+      weekly.push({ label: "周" + wd[d.getDay()], val: dlog[k] || 0 });
+    }
   }
   const bars = el("div", "bars");
   weekly.forEach((w) => {

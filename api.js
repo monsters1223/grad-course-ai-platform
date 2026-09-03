@@ -82,4 +82,13 @@ const API = {
   // 学习小组（与后端 routers/groups.py 对应）
   getGroups: () => apiFetch("/api/groups"),
   joinGroup: (gid) => apiFetch("/api/groups/" + gid + "/join", { method: "POST" }),
+
+  // 学情上报（阶段二：真实化，落到 study_logs / quiz_results）
+  reportVideo: (course_id, section_index, section_title, progress, watch_seconds) =>
+    apiFetch("/api/progress/video", { method: "POST", body: { course_id, section_index, section_title, progress, watch_seconds } }),
+  reportQuiz: (course_id, quiz_index, quiz_title, score, total) =>
+    apiFetch("/api/progress/quiz", { method: "POST", body: { course_id, quiz_index, quiz_title, score, total } }),
+
+  // 学情看板（真实聚合，来自后端）
+  getDashboard: () => apiFetch("/api/dashboard"),
 };

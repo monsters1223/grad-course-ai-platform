@@ -78,4 +78,8 @@ const API = {
     const wsBase = API_BASE.replace(/^http/, "ws");
     return wsBase + "/ws/chat/" + rid + "?token=" + encodeURIComponent(getToken() || "");
   },
+
+  // 学习小组（与后端 routers/groups.py 对应）
+  getGroups: () => apiFetch("/api/groups"),
+  joinGroup: (gid) => apiFetch("/api/groups/" + gid + "/join", { method: "POST" }),
 };

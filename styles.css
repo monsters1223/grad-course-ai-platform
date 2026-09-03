@@ -683,3 +683,17 @@ option{padding:6px}
 .msg .m-time{font-size:10px;opacity:.55;margin-top:4px;text-align:right}
 .msg.me .m-time{color:rgba(255,255,255,.85)}
 
+/* 作业状态徽章 */
+.badge.ok{display:inline-block;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;
+  color:#16a34a;background:#dcfce7;border:1px solid #bbf7d0}
+/* 学习小组 */
+.group-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;margin-top:14px}
+.group-card{padding:16px}
+.group-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.group-name{font-size:16px;font-weight:800;color:var(--text-1)}
+.group-vis{font-size:11px;padding:2px 8px;border-radius:999px}
+.group-vis.pub{color:#2563eb;background:#dbeafe}
+.group-vis.pri{color:#b45309;background:#fef3c7}
+.group-desc{font-size:13px;color:var(--text-2);margin:8px 0 12px;line-height:1.6}
+.group-foot{display:flex;align-items:center;justify-content:space-between;gap:8px}
+

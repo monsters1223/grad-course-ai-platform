@@ -462,6 +462,7 @@ const NAV = [
   { key: "dashboard", ic: "bar-chart", label: "学情看板" },
   { key: "signin", ic: "check-circle", label: "课堂签到" },
   { key: "chat", ic: "message", label: "班级群聊" },
+  { key: "groups", ic: "users", label: "学习小组" },
 ];
 
 function renderNav() {
@@ -499,6 +500,7 @@ function navigate(key, opts) {
   else if (key === "dashboard") renderDashboard(pages[key]);
   else if (key === "signin") renderSignin(pages[key]);
   else if (key === "chat") renderChat(pages[key]);
+  else if (key === "groups") renderGroups(pages[key]);
   if (key === "learn") content.classList.add("learn-active");
   else content.classList.remove("learn-active");
 }
@@ -574,7 +576,7 @@ $("#topSearch").addEventListener("input", (e) => {
 });
 
 /* ---------------- 学习页 ---------------- */
-function openCourse(id, skipNav) {
+function openCourse(id, skipNav, targetTab) {
   const c = COURSES.find((x) => x.id === id);
   if (!c) return;
   activeNav = "learn";
@@ -593,12 +595,12 @@ function openCourse(id, skipNav) {
   }
   pages.learn.style.display = "block";
   pages.learn.innerHTML = "";
-  renderLearn(pages.learn, c);
+  renderLearn(pages.learn, c, targetTab);
   $(".content").classList.add("learn-active");
   if (!skipNav) pushView("learn", false, { courseId: id });
 }
 
-function renderLearn(v, c) {
+function renderLearn(v, c, targetTab) {
   v.innerHTML = "";
   const saved = NF(localStorage.getItem(uKey("progress", c.id))) || 0;
 
@@ -694,9 +696,11 @@ function renderLearn(v, c) {
     { key: "video", label: "视频", show: videos.length },
     { key: "doc", label: "资料", show: docs.length },
     { key: "quiz", label: "章节测验", show: quizzes.length },
+    { key: "homework", label: "作业", show: (c.homeworks || []).length },
     { key: "discussion", label: "课程讨论", show: true },
   ];
   let curTab = "video";
+  if (targetTab) curTab = targetTab;
 
   function buildRecs(recs, key) {
     const box = el("div", "video-recs");
@@ -787,6 +791,9 @@ function renderLearn(v, c) {
     } else if (curTab === "quiz") {
       renderQuizPanel(panel, c);
       chapter.innerHTML = '<div class="ch">测验列表</div><div class="item active">' + quizzes.length + " 份测验</div>";
+    } else if (curTab === "homework") {
+      renderHomeworkPanel(panel, c);
+      chapter.innerHTML = '<div class="ch">作业列表</div><div class="item active">' + ((c.homeworks || []).length) + " 项作业</div>";
     } else {
       renderDiscussion(panel, c);
       chapter.innerHTML = '<div class="ch">讨论区</div><div class="item active">课程讨论</div>';
@@ -806,6 +813,59 @@ function renderLearn(v, c) {
   learn.appendChild(panel);
   v.appendChild(learn);
   renderTab();
+}
+
+/* ---------------- 课程作业（已接入后端 homeworks 状态） ---------------- */
+function renderHomeworkPanel(panel, c) {
+  panel.innerHTML = "";
+  panel.appendChild(el("h3", null, "课程作业"));
+  const list = el("div", "card");
+  list.style.cssText = "box-shadow:none;border:1px solid var(--border);margin-top:10px";
+  const hws = (c.homeworks || []);
+  if (!hws.length) {
+    list.appendChild(el("div", "muted", "本课程暂无作业"));
+    panel.appendChild(list);
+    return;
+  }
+  const stateMap = HW_STATES[c.id] || {};
+  hws.forEach((hw) => {
+    const submitted = !!(stateMap[hw.title] && stateMap[hw.title].submitted);
+    const row = el("div", "doc-row");
+    const info = el("div", "doc-info");
+    info.innerHTML = '<div class="li-ic" data-icon="book-open"> </div><div class="li-body"><h4>' +
+      esc(hw.title) + '</h4><p>' + esc(hw.desc || "") + (hw.due ? ' · 截止 ' + esc(hw.due) : '') + '</p></div>';
+    const actions = el("div", "doc-actions");
+    if (submitted) {
+      actions.appendChild(el("span", "badge ok", "已提交 ✓"));
+    } else {
+      const b = el("button", "btn sm", "去提交");
+      b.onclick = () => markHomework(c.id, hw.title);
+      actions.appendChild(b);
+    }
+    row.appendChild(info); row.appendChild(actions);
+    initIcons(row);
+    list.appendChild(row);
+  });
+  panel.appendChild(list);
+
+  // 异步用后端真实提交状态覆盖（HW_STATES 未加载时更准）
+  API.getHomeworks(c.id).then((data) => {
+    const byTitle = {};
+    (data || []).forEach((h) => { byTitle[h.title] = h; });
+    [...list.querySelectorAll(".doc-row")].forEach((row, i) => {
+      const hw = hws[i]; const real = byTitle[hw.title];
+      if (!real) return;
+      const actions = row.querySelector(".doc-actions");
+      actions.innerHTML = "";
+      if (real.submitted) {
+        actions.appendChild(el("span", "badge ok", "已提交 ✓"));
+      } else {
+        const b = el("button", "btn sm", "去提交");
+        b.onclick = () => markHomework(c.id, hw.title);
+        actions.appendChild(b);
+      }
+    });
+  }).catch(() => {});
 }
 
 function refreshProgressLabel(c, ratio) {
@@ -1189,7 +1249,8 @@ function renderDashboard(v) {
         row.appendChild(btn);
       } else {
         const btn = el("button", "btn sm", "去做");
-        btn.onclick = () => { openCourse(t.cid, true); };
+        const target = t.type === "quiz" ? "quiz" : "video";
+        btn.onclick = () => { openCourse(t.cid, true, target); };
         row.appendChild(btn);
       }
       initIcons(row);
@@ -1378,6 +1439,61 @@ function renderChat(v) {
   }
   sendBtn.onclick = doSend;
   input.addEventListener("keydown", (e) => { if (e.key === "Enter") doSend(); });
+}
+
+/* ---------------- 学习小组（已接入后端 /api/groups） ---------------- */
+function renderGroups(v) {
+  v.innerHTML = "";
+  v.appendChild(el("div", "h-title", "学习小组"));
+  v.appendChild(el("p", "h-sub", "加入同学自发组织的学习小组，一起讨论与打卡"));
+
+  const grid = el("div", "group-grid");
+  v.appendChild(grid);
+  grid.appendChild(el("div", "muted", "加载中…"));
+
+  // 本地已加入记录（按用户隔离；后端 ChatMember 为真源，这里只控制按钮态）
+  const joined = lsGet(uKey("joinedGroups"), {}) || {};
+
+  function draw(groups) {
+    grid.innerHTML = "";
+    if (!groups.length) {
+      grid.appendChild(el("div", "muted", "暂无学习小组，可联系老师创建。"));
+      return;
+    }
+    groups.forEach((g) => {
+      const card = el("div", "card group-card");
+      const head = el("div", "group-head");
+      head.appendChild(el("div", "group-name", g.name));
+      head.appendChild(el("span", "group-vis " + (g.visibility === "private" ? "pri" : "pub"),
+        g.visibility === "private" ? "私密" : "公开"));
+      card.appendChild(head);
+      if (g.desc) card.appendChild(el("p", "group-desc", g.desc));
+      const foot = el("div", "group-foot");
+      foot.appendChild(el("span", "muted", (g.members || 0) + " 人"));
+      const btn = el("button", "btn sm", joined[g.id] ? "已加入 ✓" : "加入");
+      if (joined[g.id]) { btn.classList.add("ghost"); btn.disabled = true; }
+      else btn.onclick = () => {
+        btn.textContent = "加入中…"; btn.disabled = true;
+        API.joinGroup(g.id).then(() => {
+          const j = lsGet(uKey("joinedGroups"), {}) || {};
+          j[g.id] = true; lsSet(uKey("joinedGroups"), j);
+          toast("已加入「" + g.name + "」");
+          draw(groups);
+        }).catch((e) => {
+          btn.disabled = false; btn.textContent = "加入";
+          toast(e.message || "加入失败");
+        });
+      };
+      foot.appendChild(btn);
+      card.appendChild(foot);
+      grid.appendChild(card);
+    });
+  }
+
+  API.getGroups().then(draw).catch((e) => {
+    grid.innerHTML = "";
+    grid.appendChild(el("div", "muted", "加载小组失败：" + (e.message || "后端未连接")));
+  });
 }
 
 /* ---------------- 悬浮 AI 助手 ---------------- */

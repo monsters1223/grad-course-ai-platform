@@ -87,28 +87,29 @@ const AI_REPLIES = [
 const AI_FALLBACK = "我是本课程的 AI 助教（当前为演示版，使用预设话术回答）。我可以帮你解答课程相关的基础问题，比如：学术写作规范、文献引用、数据科学方法、工程伦理，以及作业 / 视频 / 签到 / 测验的使用等。你可以换个说法，或问我更具体的问题～";
 
 // 课程级默认推荐视频（当章节没有单独配置 recs 时作为兜底）
+// 注意：key 必须与后端课程 id 一致（1=数据科学导论 / 2=科技伦理与人工智能 / 3=学术写作与规范）
 const VIDEO_LINKS = {
   1: [
-    { title: "学术写作入门：如何提出研究问题", url: "https://search.bilibili.com/all?keyword=学术写作%20研究问题", source: "Bilibili" },
-    { title: "引用规范与学术诚信（通识讲座）", url: "https://search.bilibili.com/all?keyword=引用规范%20学术诚信", source: "Bilibili" },
-    { title: "文献综述写作方法", url: "https://search.bilibili.com/all?keyword=文献综述%20写作方法", source: "Bilibili" },
-  ],
-  2: [
     { title: "数据科学导论（清华公开课）", url: "https://search.bilibili.com/all?keyword=数据科学导论%20清华", source: "Bilibili" },
     { title: "Python 数据分析入门", url: "https://search.bilibili.com/all?keyword=Python%20数据分析%20入门", source: "Bilibili" },
     { title: "数据可视化与故事讲述", url: "https://search.bilibili.com/all?keyword=数据可视化%20故事讲述", source: "Bilibili" },
   ],
-  3: [
+  2: [
     { title: "工程伦理：公众安全与职业责任", url: "https://search.bilibili.com/all?keyword=工程伦理%20公众安全", source: "Bilibili" },
     { title: "自动驾驶的伦理困境", url: "https://search.bilibili.com/all?keyword=自动驾驶%20伦理困境", source: "Bilibili" },
     { title: "工程师的 whistleblowing 与社会责任", url: "https://search.bilibili.com/all?keyword=工程师%20社会责任%20举报", source: "Bilibili" },
+  ],
+  3: [
+    { title: "学术写作入门：如何提出研究问题", url: "https://search.bilibili.com/all?keyword=学术写作%20研究问题", source: "Bilibili" },
+    { title: "引用规范与学术诚信（通识讲座）", url: "https://search.bilibili.com/all?keyword=引用规范%20学术诚信", source: "Bilibili" },
+    { title: "文献综述写作方法", url: "https://search.bilibili.com/all?keyword=文献综述%20写作方法", source: "Bilibili" },
   ],
 };
 
 // 课程数据
 const COURSES = [
   {
-    id: 1,
+    id: 3,
     title: "学术写作与规范",
     teacher: "王怀安 · 人文学院",
     coverColor: "#5E82D8",
@@ -148,8 +149,7 @@ const COURSES = [
       { user: "王怀安", role: "teacher", content: "间接引用需注明“据某某研究”，直接引用的话加上页码即可，详见第 2 章课件第 4 页。", ts: "2026-09-10 10:05" },
     ],
     homeworks: [
-      { title: "作业 1：文献综述初稿", desc: "围绕自选课题完成 1500 字综述，使用课程引用格式。", due: "2026-09-20" },
-      { title: "作业 2：论证结构分析", desc: "选取一篇论文分析其论点、论据与论证方式。", due: "2026-09-27" },
+      { title: "作业1：文献综述初稿", desc: "围绕自选课题完成 1500 字综述，使用课程引用格式。", due: "2026-09-20" },
     ],
     analytics: {
       studyHours: 12.5,
@@ -167,9 +167,9 @@ const COURSES = [
     },
   },
   {
-    id: 2,
+    id: 1,
     title: "数据科学导论",
-    teacher: "李慕白 · 计算机学院",
+    teacher: "李教授 · 计算机学院",
     coverColor: "#A99CF5",
     coverText: "数",
     category: "理工通识",
@@ -194,7 +194,7 @@ const COURSES = [
     ],
     discussions: [],
     homeworks: [
-      { title: "作业 1：数据集可视化", desc: "使用课程示例数据集完成一份可视化报告。", due: "2026-10-05" },
+      { title: "作业1：数据清洗实践", desc: "使用提供的数据集完成清洗并提交报告。", due: "2026-10-05" },
     ],
     analytics: { studyHours: 0, videoProgress: 0, avgScore: 0, weekly: [
       { label: "周一", val: 0 },
@@ -207,9 +207,9 @@ const COURSES = [
     ] },
   },
   {
-    id: 3,
-    title: "工程伦理与社会责任",
-    teacher: "赵明 · 马克思主义学院",
+    id: 2,
+    title: "科技伦理与人工智能",
+    teacher: "王老师 · 马克思主义学院",
     coverColor: "#62CBA0",
     coverText: "工",
     category: "理工通识",
@@ -231,9 +231,7 @@ const COURSES = [
     discussions: [
       { user: "林深夜", role: "student", content: "老师，自动驾驶的“电车难题”在工程中真的需要工程师决策吗？", ts: "2026-09-12 15:30" },
     ],
-    homeworks: [
-      { title: "作业 1：工程事故案例分析", desc: "选取一个真实工程事故，从伦理责任角度分析。", due: "2026-09-25" },
-    ],
+    homeworks: [],
     analytics: {
       studyHours: 8,
       videoProgress: 60,

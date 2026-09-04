@@ -68,6 +68,9 @@ const API = {
   submitHomework: (homework_id, answer) =>
     apiFetch("/api/homeworks/submit", { method: "POST", body: { homework_id, answer } }),
 
+  // 课程详情（含 ai_classroom_url：已生成的 AI 课堂链接，全班复用不耗额度）
+  getCourseDetail: (cid) => apiFetch("/api/courses/" + cid),
+
   // 课程讨论
   getDiscussions: (cid) => apiFetch("/api/courses/" + cid + "/discussions"),
   postDiscussion: (course_id, content) =>
@@ -91,4 +94,11 @@ const API = {
 
   // 学情看板（真实聚合，来自后端）
   getDashboard: () => apiFetch("/api/dashboard"),
+
+  // AI 互动课堂（后端 routers/ai_classroom.py）
+  // 注意：OpenMAIC 每码每日仅 10 次生成额度，故前端优先复用课程已缓存的 ai_classroom_url。
+  generateAIClassroom: (course_id) =>
+    apiFetch("/api/ai/generate", { method: "POST", body: { course_id } }),
+  getAIStatus: (job_id, course_id) =>
+    apiFetch("/api/ai/status/" + encodeURIComponent(job_id) + "?course_id=" + course_id),
 };

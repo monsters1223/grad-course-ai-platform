@@ -713,11 +713,11 @@ function renderLearn(v, c, targetTab) {
         dlog[today] = (dlog[today] || 0) + 1;
         lsSet(uKey("studyDaily"), dlog);
       }
-      // 阶段二：每 20 秒向后端上报一次视频进度（best-effort，失败不阻塞）
-      const repKey = uKey("reportTick", c.id);
-      const lastRep = NF(localStorage.getItem(repKey)) || 0;
-      if (video.currentTime - lastRep >= 20) {
-        localStorage.setItem(repKey, video.currentTime);
+      // 阶段二：每 10 秒向后端上报一次视频进度（best-effort，失败不阻塞）
+      // 节流基准用闭包变量（换视频/重开会话自动重置），不再存 localStorage
+      if (typeof _lastReportTime === "undefined") _lastReportTime = 0;
+      if (video.currentTime - _lastReportTime >= 10) {
+        _lastReportTime = video.currentTime;
         try {
           API.reportVideo(c.id, sectionIndex, sectionTitle, ratio, Math.round(video.currentTime))
             .then(() => { DASH_BACKEND = null; }).catch(() => {});
@@ -725,10 +725,12 @@ function renderLearn(v, c, targetTab) {
       }
     });
     // 阶段二：记录当前活动视频，供关页/切后台时补报最后进度
+    // 同时重置心跳节流基准（闭包变量，换视频自动归零）
     ACTIVE_VIDEO = video;
     ACTIVE_COURSE = c;
     ACTIVE_SECTION = sectionIndex;
     ACTIVE_SECTION_TITLE = sectionTitle;
+    _lastReportTime = 0;
     player.appendChild(video);
     video.play().catch(() => {});
   }
@@ -1191,6 +1193,7 @@ function renderAIChat(v) {
 // 后端拉取：作业提交状态 + 本人签到状态（进入看板时刷新）
 let HW_STATES = {};      // { cid: { title: { submitted, id } } }
 let SIGNIN_DONE = false;
+let HW_STATES_LOADED = false;  // 防止 renderDashboard 末尾 loadHWStates 无限递归
 async function loadHWStates() {
   if (!getToken()) return;
   try {
@@ -1370,8 +1373,11 @@ function renderDashboard(v) {
   chartCard.appendChild(bars);
   v.appendChild(chartCard);
 
-  // 异步刷新作业/签到真实状态（后端）
-  loadHWStates().then(() => { if (pages.dashboard === v) renderDashboard(pages.dashboard); });
+  // 异步刷新作业/签到真实状态（后端）——仅首次进入看板时加载一次，避免无限递归
+  if (!HW_STATES_LOADED) {
+    HW_STATES_LOADED = true;
+    loadHWStates().then(() => { if (pages.dashboard === v) renderDashboard(pages.dashboard); });
+  }
 }
 
 // 作业提交（已接入后端：提交到 /api/homeworks/submit，状态从后端读取）
@@ -1383,6 +1389,7 @@ async function markHomework(cid, title) {
     if (!hw) { toast("未找到对应作业：「" + title + "」"); return; }
     await API.submitHomework(hw.id, "");
     toast("已提交作业：「" + title + "」");
+    HW_STATES_LOADED = false;  // 重置标志，让看板下次渲染时重新拉取作业状态
     await loadHWStates();
     if (pages.dashboard) renderDashboard(pages.dashboard);
   } catch (e) { toast(e.message || "提交失败"); }

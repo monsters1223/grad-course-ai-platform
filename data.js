@@ -106,66 +106,8 @@ const VIDEO_LINKS = {
   ],
 };
 
-// 课程数据
+// 课程数据（顺序与后端 seed 一致：id=1 数据科学导论 / id=2 科技伦理与人工智能 / id=3 学术写作与规范）
 const COURSES = [
-  {
-    id: 3,
-    title: "学术写作与规范",
-    teacher: "王怀安 · 人文学院",
-    coverColor: "#5E82D8",
-    coverText: "写",
-    category: "人文通识",
-    desc: "面向研究生的学术写作训练，涵盖文献综述、引用规范与论证结构。",
-    sections: [
-      { stype: "video", title: "第1章 文献检索与综述", content: "assets/ch1.mp4", recs: [
-        { title: "文献检索技巧：从知网到 Web of Science", url: "https://search.bilibili.com/all?keyword=文献检索%20知网%20Web%20of%20Science", source: "Bilibili" },
-        { title: "如何快速判断一篇论文是否值得读", url: "https://search.bilibili.com/all?keyword=如何判断论文是否值得读", source: "Bilibili" },
-      ]},
-      { stype: "video", title: "第2章 引用格式与学术诚信", content: "assets/ch2.mp4", recs: [
-        { title: "GB/T 7714 参考文献格式详解", url: "https://search.bilibili.com/all?keyword=GB%2FT%207714%20参考文献", source: "Bilibili" },
-        { title: "学术诚信与论文查重原理", url: "https://search.bilibili.com/all?keyword=学术诚信%20论文查重", source: "Bilibili" },
-      ]},
-      { stype: "video", title: "第3章 论证结构与逻辑", content: "", recs: [
-        { title: "学术论文的论证结构：IMRAD 模式", url: "https://search.bilibili.com/all?keyword=学术论文%20IMRAD%20论证结构", source: "Bilibili" },
-        { title: "批判性思维与逻辑谬误", url: "https://search.bilibili.com/all?keyword=批判性思维%20逻辑谬误", source: "Bilibili" },
-      ]},
-      { stype: "doc", title: "第1章课件·文献检索", content: "assets/slide1.html" },
-      { stype: "doc", title: "第2章课件·引用规范", content: "assets/slide2.html" },
-      { stype: "doc", title: "第3章课件·论证结构", content: "assets/slide3.html" },
-      { stype: "quiz", title: "章节测验 1", questions: [
-        { q: "直接引用他人原话时，必须标注什么？", options: ["作者姓名", "出版年份", "具体页码", "出版社"], answer: 2, explanation: "直接引用需要在引文后标注页码，以便读者核对原文。" },
-        { q: "文献综述的核心目的是什么？", options: ["罗列尽可能多的文献", "梳理研究脉络并指出现有缺口", "直接复制摘要", "省略引用来源"], answer: 1, explanation: "文献综述重在梳理已有研究脉络，为自己的研究定位。" },
-        { q: "下列哪一项不属于学术不端行为？", options: ["伪造数据", "正确引用", "一稿多投", "代写论文"], answer: 1, explanation: "正确引用是学术规范行为，其余均为学术不端。" },
-        { q: "论证结构的三要素是什么？", options: ["论点、论据、论证", "引言、方法、结论", "背景、数据、致谢", "标题、摘要、关键词"], answer: 0, explanation: "论证=论点+论据+论证过程。" },
-        { q: "间接引用时，正文标注通常需要包含？", options: ["仅作者", "作者与年份", "仅页码", "仅标题"], answer: 1, explanation: "间接引用需注明作者与年份，如（张三，2025）。" },
-      ]},
-      { stype: "quiz", title: "章节测验 2", questions: [
-        { q: "学术论文中，结论部分不应做什么？", options: ["总结发现", "提出新观点", "重申研究意义", "建议未来方向"], answer: 1, explanation: "结论不应引入正文未讨论的新观点。" },
-        { q: "引文格式混乱会导致什么问题？", options: ["影响可读性", "涉嫌抄袭", "降低可信度", "以上皆是"], answer: 3, explanation: "格式混乱会影响阅读、可信度，严重时被视为抄袭。" },
-      ]},
-    ],
-    discussions: [
-      { user: "陈嘉禾", role: "student", content: "老师，间接引用和直接引用在正文标注上有什么区别？", ts: "2026-09-10 09:12" },
-      { user: "王怀安", role: "teacher", content: "间接引用需注明“据某某研究”，直接引用的话加上页码即可，详见第 2 章课件第 4 页。", ts: "2026-09-10 10:05" },
-    ],
-    homeworks: [
-      { title: "作业1：文献综述初稿", desc: "围绕自选课题完成 1500 字综述，使用课程引用格式。", due: "2026-09-20" },
-    ],
-    analytics: {
-      studyHours: 12.5,
-      videoProgress: 68,
-      avgScore: 88,
-      weekly: [
-        { label: "周一", val: 30 },
-        { label: "周二", val: 55 },
-        { label: "周三", val: 40 },
-        { label: "周四", val: 72 },
-        { label: "周五", val: 60 },
-        { label: "周六", val: 88 },
-        { label: "周日", val: 45 },
-      ],
-    },
-  },
   {
     id: 1,
     title: "数据科学导论",
@@ -222,14 +164,14 @@ const COURSES = [
       { stype: "doc", title: "第1章课件·伦理决策框架", content: "assets/slide1.html" },
       { stype: "quiz", title: "章节测验 1", questions: [
         { q: "工程师的首要责任对象通常是？", options: ["雇主利益", "公众安全与健康", "个人声誉", "项目利润"], answer: 1, explanation: "工程伦理强调公众安全与健康优先。" },
-        { q: "自动驾驶中的“电车难题”主要用于讨论什么？", options: ["算法效率", "伦理决策", "车辆外观设计", "电池续航"], answer: 1, explanation: "电车难题式情境常用于讨论自动驾驶的伦理决策。" },
+        { q: "自动驾驶中的「电车难题」主要用于讨论什么？", options: ["算法效率", "伦理决策", "车辆外观设计", "电池续航"], answer: 1, explanation: "电车难题式情境常用于讨论自动驾驶的伦理决策。" },
         { q: "Whistleblowing 在工程伦理中通常指？", options: ["举报不当行为", "加班赶工", "技术创新", "市场推广"], answer: 0, explanation: "Whistleblowing 指揭露组织内不道德或违法行为。" },
         { q: "伦理决策时应当？", options: ["只考虑技术可行性", "综合多方利益与价值", "只听雇主意见", "回避公众意见"], answer: 1, explanation: "伦理决策需要综合技术、利益相关者与价值判断。" },
         { q: "数据隐私保护的基本原则之一是？", options: ["数据最小化", "数据最大化", "无限制共享", "永不删除"], answer: 0, explanation: "数据最小化原则：只收集必要数据。" },
       ]},
     ],
     discussions: [
-      { user: "林深夜", role: "student", content: "老师，自动驾驶的“电车难题”在工程中真的需要工程师决策吗？", ts: "2026-09-12 15:30" },
+      { user: "林深夜", role: "student", content: "老师，自动驾驶的「电车难题」在工程中真的需要工程师决策吗？", ts: "2026-09-12 15:30" },
     ],
     homeworks: [],
     analytics: {
@@ -244,6 +186,64 @@ const COURSES = [
         { label: "周五", val: 65 },
         { label: "周六", val: 40 },
         { label: "周日", val: 25 },
+      ],
+    },
+  },
+  {
+    id: 3,
+    title: "学术写作与规范",
+    teacher: "王怀安 · 人文学院",
+    coverColor: "#5E82D8",
+    coverText: "写",
+    category: "人文通识",
+    desc: "面向研究生的学术写作训练，涵盖文献综述、引用规范与论证结构。",
+    sections: [
+      { stype: "video", title: "第1章 文献检索与综述", content: "assets/ch1.mp4", recs: [
+        { title: "文献检索技巧：从知网到 Web of Science", url: "https://search.bilibili.com/all?keyword=文献检索%20知网%20Web%20of%20Science", source: "Bilibili" },
+        { title: "如何快速判断一篇论文是否值得读", url: "https://search.bilibili.com/all?keyword=如何判断论文是否值得读", source: "Bilibili" },
+      ]},
+      { stype: "video", title: "第2章 引用格式与学术诚信", content: "assets/ch2.mp4", recs: [
+        { title: "GB/T 7714 参考文献格式详解", url: "https://search.bilibili.com/all?keyword=GB%2FT%207714%20参考文献", source: "Bilibili" },
+        { title: "学术诚信与论文查重原理", url: "https://search.bilibili.com/all?keyword=学术诚信%20论文查重", source: "Bilibili" },
+      ]},
+      { stype: "video", title: "第3章 论证结构与逻辑", content: "", recs: [
+        { title: "学术论文的论证结构：IMRAD 模式", url: "https://search.bilibili.com/all?keyword=学术论文%20IMRAD%20论证结构", source: "Bilibili" },
+        { title: "批判性思维与逻辑谬误", url: "https://search.bilibili.com/all?keyword=批判性思维%20逻辑谬误", source: "Bilibili" },
+      ]},
+      { stype: "doc", title: "第1章课件·文献检索", content: "assets/slide1.html" },
+      { stype: "doc", title: "第2章课件·引用规范", content: "assets/slide2.html" },
+      { stype: "doc", title: "第3章课件·论证结构", content: "assets/slide3.html" },
+      { stype: "quiz", title: "章节测验 1", questions: [
+        { q: "直接引用他人原话时，必须标注什么？", options: ["作者姓名", "出版年份", "具体页码", "出版社"], answer: 2, explanation: "直接引用需要在引文后标注页码，以便读者核对原文。" },
+        { q: "文献综述的核心目的是什么？", options: ["罗列尽可能多的文献", "梳理研究脉络并指出现有缺口", "直接复制摘要", "省略引用来源"], answer: 1, explanation: "文献综述重在梳理已有研究脉络，为自己的研究定位。" },
+        { q: "下列哪一项不属于学术不端行为？", options: ["伪造数据", "正确引用", "一稿多投", "代写论文"], answer: 1, explanation: "正确引用是学术规范行为，其余均为学术不端。" },
+        { q: "论证结构的三要素是什么？", options: ["论点、论据、论证", "引言、方法、结论", "背景、数据、致谢", "标题、摘要、关键词"], answer: 0, explanation: "论证=论点+论据+论证过程。" },
+        { q: "间接引用时，正文标注通常需要包含？", options: ["仅作者", "作者与年份", "仅页码", "仅标题"], answer: 1, explanation: "间接引用需注明作者与年份，如（张三，2025）。" },
+      ]},
+      { stype: "quiz", title: "章节测验 2", questions: [
+        { q: "学术论文中，结论部分不应做什么？", options: ["总结发现", "提出新观点", "重申研究意义", "建议未来方向"], answer: 1, explanation: "结论不应引入正文未讨论的新观点。" },
+        { q: "引文格式混乱会导致什么问题？", options: ["影响可读性", "涉嫌抄袭", "降低可信度", "以上皆是"], answer: 3, explanation: "格式混乱会影响阅读、可信度，严重时被视为抄袭。" },
+      ]},
+    ],
+    discussions: [
+      { user: "陈嘉禾", role: "student", content: "老师，间接引用和直接引用在正文标注上有什么区别？", ts: "2026-09-10 09:12" },
+      { user: "王怀安", role: "teacher", content: "间接引用需注明「据某某研究」，直接引用的话加上页码即可，详见第 2 章课件第 4 页。", ts: "2026-09-10 10:05" },
+    ],
+    homeworks: [
+      { title: "作业1：文献综述初稿", desc: "围绕自选课题完成 1500 字综述，使用课程引用格式。", due: "2026-09-20" },
+    ],
+    analytics: {
+      studyHours: 12.5,
+      videoProgress: 68,
+      avgScore: 88,
+      weekly: [
+        { label: "周一", val: 30 },
+        { label: "周二", val: 55 },
+        { label: "周三", val: 40 },
+        { label: "周四", val: 72 },
+        { label: "周五", val: 60 },
+        { label: "周六", val: 88 },
+        { label: "周日", val: 45 },
       ],
     },
   },

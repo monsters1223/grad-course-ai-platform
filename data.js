@@ -106,9 +106,9 @@ const VIDEO_LINKS = {
   ],
 };
 
-// 课程数据
+// 课程数据（顺序与后端 seed 一致：id=1 数据科学导论 / id=2 科技伦理与人工智能 / id=3 学术写作与规范）
 const COURSES = [
-{
+  {
     id: 1,
     title: "数据科学导论",
     teacher: "李教授 · 计算机学院",
@@ -148,7 +148,7 @@ const COURSES = [
       { label: "周日", val: 0 },
     ] },
   },
-{
+  {
     id: 2,
     title: "科技伦理与人工智能",
     teacher: "王老师 · 马克思主义学院",
@@ -164,14 +164,14 @@ const COURSES = [
       { stype: "doc", title: "第1章课件·伦理决策框架", content: "assets/slide1.html" },
       { stype: "quiz", title: "章节测验 1", questions: [
         { q: "工程师的首要责任对象通常是？", options: ["雇主利益", "公众安全与健康", "个人声誉", "项目利润"], answer: 1, explanation: "工程伦理强调公众安全与健康优先。" },
-        { q: "自动驾驶中的“电车难题”主要用于讨论什么？", options: ["算法效率", "伦理决策", "车辆外观设计", "电池续航"], answer: 1, explanation: "电车难题式情境常用于讨论自动驾驶的伦理决策。" },
+        { q: "自动驾驶中的「电车难题」主要用于讨论什么？", options: ["算法效率", "伦理决策", "车辆外观设计", "电池续航"], answer: 1, explanation: "电车难题式情境常用于讨论自动驾驶的伦理决策。" },
         { q: "Whistleblowing 在工程伦理中通常指？", options: ["举报不当行为", "加班赶工", "技术创新", "市场推广"], answer: 0, explanation: "Whistleblowing 指揭露组织内不道德或违法行为。" },
         { q: "伦理决策时应当？", options: ["只考虑技术可行性", "综合多方利益与价值", "只听雇主意见", "回避公众意见"], answer: 1, explanation: "伦理决策需要综合技术、利益相关者与价值判断。" },
         { q: "数据隐私保护的基本原则之一是？", options: ["数据最小化", "数据最大化", "无限制共享", "永不删除"], answer: 0, explanation: "数据最小化原则：只收集必要数据。" },
       ]},
     ],
     discussions: [
-      { user: "林深夜", role: "student", content: "老师，自动驾驶的“电车难题”在工程中真的需要工程师决策吗？", ts: "2026-09-12 15:30" },
+      { user: "林深夜", role: "student", content: "老师，自动驾驶的「电车难题」在工程中真的需要工程师决策吗？", ts: "2026-09-12 15:30" },
     ],
     homeworks: [],
     analytics: {
@@ -189,7 +189,7 @@ const COURSES = [
       ],
     },
   },
-{
+  {
     id: 3,
     title: "学术写作与规范",
     teacher: "王怀安 · 人文学院",
@@ -227,7 +227,7 @@ const COURSES = [
     ],
     discussions: [
       { user: "陈嘉禾", role: "student", content: "老师，间接引用和直接引用在正文标注上有什么区别？", ts: "2026-09-10 09:12" },
-      { user: "王怀安", role: "teacher", content: "间接引用需注明“据某某研究”，直接引用的话加上页码即可，详见第 2 章课件第 4 页。", ts: "2026-09-10 10:05" },
+      { user: "王怀安", role: "teacher", content: "间接引用需注明「据某某研究」，直接引用的话加上页码即可，详见第 2 章课件第 4 页。", ts: "2026-09-10 10:05" },
     ],
     homeworks: [
       { title: "作业1：文献综述初稿", desc: "围绕自选课题完成 1500 字综述，使用课程引用格式。", due: "2026-09-20" },
@@ -246,5 +246,5 @@ const COURSES = [
         { label: "周日", val: 45 },
       ],
     },
-  }
+  },
 ];

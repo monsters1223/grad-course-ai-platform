@@ -28,6 +28,11 @@ let ACTIVE_VIDEO = null;       // 当前正在播放的 <video>
 let ACTIVE_COURSE = null;      // 当前课程对象
 let ACTIVE_SECTION = -1;       // 当前章节在课程 sections 中的序号
 let ACTIVE_SECTION_TITLE = "";
+
+// AI 课堂：按课程缓存已生成的课堂 URL（OpenMAIC 每码每日仅 10 次生成额度，必须复用）
+const AI_URL_CACHE = {};
+let AI_POLL = null;            // 轮询定时器
+let AI_BUSY = false;           // 是否正在生成中（防重复提交）
 let DASH_BACKEND = null;       // 后端看板聚合结果（优先于 localStorage 兜底）
 let _progressReportBound = false;
 
@@ -694,11 +699,6 @@ function renderLearn(v, c, targetTab) {
     video.controls = true;
     video.style.cssText = "width:100%;display:block;max-height:420px;background:#000";
     video.src = s.content;
-    // 节流基准改为「本次播放会话」的闭包变量：
-    // 原实现存 localStorage 且按课程（不按章节），换视频/重开会话后 currentTime 归零，
-    // 而旧的 lastRep 仍是上一次播放的高水位 → 新视频若短于 (lastRep+阈值) 则永远不触发上报。
-    let lastRep = -10;     // 心跳阈值 10 秒（演示视频约 10 秒长，原 20 秒阈值对短视频失效）
-    let lastTick = 0;      // 学习时长累计节流（每满 60 秒记 1 分钟）
     video.addEventListener("timeupdate", () => {
       if (!video.duration) return;
       const ratio = Math.min(100, Math.round((video.currentTime / video.duration) * 100));
@@ -706,10 +706,12 @@ function renderLearn(v, c, targetTab) {
       const prev = NF(localStorage.getItem(key)) || 0;
       if (ratio > prev) { localStorage.setItem(key, ratio); refreshProgressLabel(c, ratio); }
       // 累计学习时长（每播放满 60 秒记 1 分钟），按用户隔离
+      const tickKey = uKey("studyTick", c.id);
+      const lastTick = NF(localStorage.getItem(tickKey)) || 0;
       if (video.currentTime - lastTick >= 60) {
         const studyKey = uKey("studyMin", c.id);
         localStorage.setItem(studyKey, (NF(localStorage.getItem(studyKey)) || 0) + 1);
-        lastTick = video.currentTime;
+        localStorage.setItem(tickKey, video.currentTime);
         // 写入「今日学习分钟」，用于学情看板「本周学习时长」
         const dlog = lsGet(uKey("studyDaily"), {}) || {};
         const today = new Date().toISOString().slice(0, 10);
@@ -717,8 +719,10 @@ function renderLearn(v, c, targetTab) {
         lsSet(uKey("studyDaily"), dlog);
       }
       // 阶段二：每 10 秒向后端上报一次视频进度（best-effort，失败不阻塞）
-      if (video.currentTime - lastRep >= 10) {
-        lastRep = video.currentTime;
+      // 节流基准用闭包变量（换视频/重开会话自动重置），不再存 localStorage
+      if (typeof _lastReportTime === "undefined") _lastReportTime = 0;
+      if (video.currentTime - _lastReportTime >= 10) {
+        _lastReportTime = video.currentTime;
         try {
           API.reportVideo(c.id, sectionIndex, sectionTitle, ratio, Math.round(video.currentTime))
             .then(() => { DASH_BACKEND = null; }).catch(() => {});
@@ -726,10 +730,12 @@ function renderLearn(v, c, targetTab) {
       }
     });
     // 阶段二：记录当前活动视频，供关页/切后台时补报最后进度
+    // 同时重置心跳节流基准（闭包变量，换视频自动归零）
     ACTIVE_VIDEO = video;
     ACTIVE_COURSE = c;
     ACTIVE_SECTION = sectionIndex;
     ACTIVE_SECTION_TITLE = sectionTitle;
+    _lastReportTime = 0;
     player.appendChild(video);
     video.play().catch(() => {});
   }
@@ -1145,18 +1151,48 @@ async function renderDiscussion(panel, c) {
   applyCollapse();
 }
 
-/* ---------------- AI 课堂 ---------------- */
+/* ---------------- AI 课堂（已接入后端 /api/ai/generate + 轮询 status） ---------------- */
 function renderAIChat(v) {
   v.innerHTML = "";
+  // 进入页面先停掉上一轮未结束的轮询，避免重复请求
+  if (AI_POLL) { clearInterval(AI_POLL); AI_POLL = null; AI_BUSY = false; }
+
   v.appendChild(el("div", "h-title", "AI 互动课堂"));
-  v.appendChild(el("p", "h-sub", "基于 OpenMAIC 的多智能体课堂，随时与 AI 助教对话"));
+  v.appendChild(el("p", "h-sub", "基于 OpenMAIC 的多智能体课堂，选择课程后进入真实课堂"));
+
+  const picker = el("div");
+  picker.style.cssText = "display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap";
+  picker.appendChild(el("span", "muted", "选择课程"));
+  const sel = document.createElement("select");
+  sel.style.cssText = "padding:7px 10px;border:1px solid rgba(0,0,0,.15);border-radius:8px;font-size:13px;min-width:220px;background:#fff";
+  COURSES.forEach((c) => {
+    const o = document.createElement("option");
+    o.value = String(c.id);
+    o.textContent = c.title;
+    sel.appendChild(o);
+  });
+  picker.appendChild(sel);
+  v.appendChild(picker);
 
   const banner = el("div", "ai-banner");
-  banner.innerHTML = '<div class="emoji" data-icon="bot" style="font-size:40px;color:#6B5BD8"> </div><div><h3>多智能体 AI 课堂已就绪</h3><p>点击右侧按钮，进入真实的 AI 互动课堂（教师 / 助教 / 学伴 三种智能体）</p></div>';
-  const btn = el("button", "btn ai", "打开 AI 互动课堂");
-  btn.style.marginLeft = "auto";
-  btn.onclick = () => window.open(AI_CLASSROOM_URL, "_blank");
-  banner.appendChild(btn);
+  const emoji = el("div", "emoji");
+  emoji.setAttribute("data-icon", "bot");
+  emoji.style.cssText = "font-size:40px;color:#6B5BD8";
+  const info = el("div");
+  const h3 = el("h3", null, "多智能体 AI 课堂");
+  const pdesc = el("p", null, "由教师 / 助教 / 学伴三种智能体组成，选择课程后即可进入");
+  info.appendChild(h3);
+  info.appendChild(pdesc);
+  const action = el("div");
+  action.style.cssText = "margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px";
+  const btn = el("button", "btn ai", "检查课堂");
+  const tip = el("div", "muted", "");
+  tip.style.cssText = "font-size:12px;min-height:16px";
+  action.appendChild(btn);
+  action.appendChild(tip);
+  banner.appendChild(emoji);
+  banner.appendChild(info);
+  banner.appendChild(action);
   v.appendChild(banner);
   initIcons(banner);
 
@@ -1186,13 +1222,130 @@ function renderAIChat(v) {
     '<div class="chat-msg me"><div class="meta"><span style="font-weight:700">' + esc(currentUser.name) + '</span></div>能帮我总结一下第 1 章的核心概念吗？</div>' +
     '<div class="chat-msg ai"><div class="meta"><span style="font-weight:700">答疑助教</span></div>当然！第 1 章围绕「数据思维」展开，重点是从业务问题出发，明确要回答什么问题、需要哪些数据……</div></div>';
   v.appendChild(chat);
+
+  // ---- 生成 / 轮询逻辑 ----
+  function setTip(t, color) { tip.textContent = t || ""; tip.style.color = color || ""; }
+
+  function setReady(url, reused) {
+    btn.textContent = "进入 AI 课堂";
+    btn.className = "btn ai";
+    btn.disabled = false;
+    btn.onclick = () => window.open(url, "_blank");
+    h3.textContent = "课堂已就绪";
+    pdesc.textContent = reused
+      ? "已复用本课程此前生成的课堂（不消耗 OpenMAIC 生成额度）"
+      : "课堂生成完成，可随时进入学习";
+    setTip(reused ? "复用已有课堂" : "生成完成", "#1D9E75");
+  }
+
+  function setIdle(msg, tipMsg) {
+    btn.textContent = "生成课堂";
+    btn.className = "btn";
+    btn.disabled = false;
+    btn.onclick = startGenerate;
+    h3.textContent = "该课程尚未创建 AI 课堂";
+    pdesc.textContent = msg || "点击下方按钮，由 OpenMAIC 多智能体生成专属互动课堂（约 1–3 分钟）";
+    setTip(tipMsg || "", "#A32D2D");
+  }
+
+  function onGenFail(msg) {
+    btn.textContent = "重试生成";
+    btn.className = "btn";
+    btn.disabled = false;
+    btn.onclick = startGenerate;
+    h3.textContent = "课堂生成失败";
+    let hint = msg;
+    if (/额度|403/.test(msg)) {
+      hint = "OpenMAIC 今日生成额度已用完（每码每日 10 次）。课堂按课程复用，通常只有首次创建才消耗额度，请明天再试或联系管理员。";
+    } else if (/访问码|501/.test(msg)) {
+      hint = "后端未配置 OpenMAIC 访问码，请联系管理员在 .env 中设置 OPENMAIC_ACCESS_CODE。";
+    }
+    pdesc.textContent = hint;
+    setTip(String(msg).length > 40 ? "" : String(msg), "#A32D2D");
+  }
+
+  // 先看该课程是否已有课堂 URL（全班复用，不耗额度）
+  async function checkExisting(cid) {
+    btn.disabled = true;
+    btn.textContent = "检查中…";
+    h3.textContent = "正在检查已有课堂";
+    pdesc.textContent = "读取课程信息，若此前已生成过则直接复用";
+    setTip("");
+    try {
+      if (AI_URL_CACHE[cid]) { setReady(AI_URL_CACHE[cid], true); return; }
+      const d = await API.getCourseDetail(cid);
+      if (d && d.ai_classroom_url) {
+        AI_URL_CACHE[cid] = d.ai_classroom_url;
+        setReady(d.ai_classroom_url, true);
+      } else {
+        setIdle();
+      }
+    } catch (e) {
+      setIdle("读取课程信息失败：" + (e.message || "") + "。请确认后端已启动。", "后端未连接");
+    }
+  }
+
+  async function startGenerate() {
+    if (AI_BUSY) return;
+    const cid = Number(sel.value);
+    AI_BUSY = true;
+    btn.disabled = true;
+    btn.textContent = "生成中…";
+    h3.textContent = "AI 正在生成课堂";
+    pdesc.textContent = "OpenMAIC 多智能体正在备课，通常需要 1–3 分钟，请保持页面打开";
+    const t0 = Date.now();
+    setTip("已用时 0 秒");
+    try {
+      const g = await API.generateAIClassroom(cid);
+      const jobId = g && g.jobId;
+      if (!jobId) throw new Error("后端未返回 jobId");
+      const DONE = ["succeeded", "completed", "done"];
+      let tries = 0;
+      AI_POLL = setInterval(async () => {
+        tries++;
+        setTip("已用时 " + Math.round((Date.now() - t0) / 1000) + " 秒");
+        try {
+          const s = await API.getAIStatus(jobId, cid);
+          if (DONE.indexOf(s.status) >= 0 && s.url) {
+            clearInterval(AI_POLL); AI_POLL = null; AI_BUSY = false;
+            AI_URL_CACHE[cid] = s.url;
+            setReady(s.url, false);
+            toast("AI 课堂生成完成");
+            return;
+          }
+          if (s.status === "failed" || s.status === "error") {
+            clearInterval(AI_POLL); AI_POLL = null; AI_BUSY = false;
+            onGenFail("生成任务失败，请稍后重试");
+            return;
+          }
+          if (tries >= 60) {
+            clearInterval(AI_POLL); AI_POLL = null; AI_BUSY = false;
+            onGenFail("生成超时（超过 5 分钟），请稍后重试");
+          }
+        } catch (pe) {
+          clearInterval(AI_POLL); AI_POLL = null; AI_BUSY = false;
+          onGenFail(pe.message || "轮询状态失败");
+        }
+      }, 5000);
+    } catch (e) {
+      AI_BUSY = false;
+      onGenFail(e.message || "生成失败");
+    }
+  }
+
+  sel.onchange = () => {
+    if (AI_POLL) { clearInterval(AI_POLL); AI_POLL = null; AI_BUSY = false; }
+    checkExisting(Number(sel.value));
+  };
+  btn.onclick = () => checkExisting(Number(sel.value));
+  checkExisting(Number(sel.value));
 }
 
 /* ---------------- 学情看板 ---------------- */
 // 后端拉取：作业提交状态 + 本人签到状态（进入看板时刷新）
 let HW_STATES = {};      // { cid: { title: { submitted, id } } }
 let SIGNIN_DONE = false;
-let HW_STATES_LOADED = false;   // 防止看板异步回填触发无限重渲染循环
+let HW_STATES_LOADED = false;  // 防止 renderDashboard 末尾 loadHWStates 无限递归
 async function loadHWStates() {
   if (!getToken()) return;
   try {
@@ -1372,11 +1525,7 @@ function renderDashboard(v) {
   chartCard.appendChild(bars);
   v.appendChild(chartCard);
 
-  // 异步刷新作业/签到真实状态（后端）。
-  // ⚠ 只允许「主动进入看板」触发一次异步回填：若无条件链式重渲染，
-  // renderDashboard → loadHWStates().then(renderDashboard) 会无限自我递归，
-  // 页面永不停歇地重建 DOM（按钮刚建好就被销毁 → 点击"去做"无反应），
-  // 同时对后端发起请求风暴。HW_STATES_LOADED 由 navigate() 在进入看板时重置。
+  // 异步刷新作业/签到真实状态（后端）——仅首次进入看板时加载一次，避免无限递归
   if (!HW_STATES_LOADED) {
     HW_STATES_LOADED = true;
     loadHWStates().then(() => { if (pages.dashboard === v) renderDashboard(pages.dashboard); });
@@ -1392,6 +1541,7 @@ async function markHomework(cid, title) {
     if (!hw) { toast("未找到对应作业：「" + title + "」"); return; }
     await API.submitHomework(hw.id, "");
     toast("已提交作业：「" + title + "」");
+    HW_STATES_LOADED = false;  // 重置标志，让看板下次渲染时重新拉取作业状态
     await loadHWStates();
     if (pages.dashboard) renderDashboard(pages.dashboard);
   } catch (e) { toast(e.message || "提交失败"); }

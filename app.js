@@ -867,43 +867,51 @@ function renderLearn(v, c, targetTab) {
 }
 
 /* ---------------- 课程作业（已接入后端 homeworks 状态） ---------------- */
-// 点击「去提交」展开内联输入框，填写内容后提交（后端 /api/homeworks/submit 支持 answer 字段）
-function openHomeworkForm(cid, hw, actions) {
-  actions.innerHTML = "";
+// 点击「去提交」在作业行下方展开输入表单，填写内容后提交。
+// 注意：课程详情里的 homeworks 可能没有 id 字段，提交前必须调 getHomeworks 按标题匹配拿真实 id。
+function openHomeworkForm(cid, hw, row) {
+  document.querySelectorAll(".hw-form-row").forEach((n) => n.remove()); // 收起其他已展开的表单
+  const actions = row.querySelector(".doc-actions");
+  const form = el("div", "hw-form-row");
+  form.style.cssText = "padding:12px 18px;background:var(--surface-2,#f8fafc);border-top:1px dashed var(--border-2)";
   const ta = document.createElement("textarea");
   ta.rows = 3;
   ta.placeholder = "请输入作业内容…";
-  ta.style.cssText = "width:300px;display:block;margin-bottom:8px;padding:9px 12px;border:1px solid var(--border-2);border-radius:10px;font-size:13px;font-family:inherit;resize:vertical";
+  ta.style.cssText = "width:100%;box-sizing:border-box;margin-bottom:10px;padding:10px 12px;border:1px solid var(--border-2);border-radius:10px;font-size:13px;font-family:inherit;resize:vertical";
+  const bar = el("div");
+  bar.style.cssText = "display:flex;gap:8px;justify-content:flex-end";
   const ok = el("button", "btn sm", "提交作业");
   const cancel = el("button", "btn sm", "取消");
-  cancel.style.marginLeft = "8px";
+  bar.appendChild(ok);
+  bar.appendChild(cancel);
+  form.appendChild(ta);
+  form.appendChild(bar);
+  row.after(form);
+  ta.focus();
+  cancel.onclick = () => form.remove();
   ok.onclick = async () => {
     const answer = ta.value.trim();
     if (!answer) { toast("请先填写作业内容"); return; }
     ok.disabled = true;
     try {
-      await API.submitHomework(hw.id, answer);
+      const hws = await API.getHomeworks(cid);
+      const real = (hws || []).find((h) => h.title === hw.title);
+      if (!real) { toast("未找到对应作业：「" + hw.title + "」"); ok.disabled = false; return; }
+      await API.submitHomework(real.id, answer);
       toast("已提交作业：「" + hw.title + "」");
       HW_STATES_LOADED = false;
       await loadHWStates();
       if (pages.dashboard) renderDashboard(pages.dashboard);
-      actions.innerHTML = "";
-      actions.appendChild(el("span", "badge ok", "已提交 ✓"));
+      form.remove();
+      if (actions) {
+        actions.innerHTML = "";
+        actions.appendChild(el("span", "badge ok", "已提交 ✓"));
+      }
     } catch (e) {
       toast(e.message || "提交失败");
       ok.disabled = false;
     }
   };
-  cancel.onclick = () => {
-    actions.innerHTML = "";
-    const b = el("button", "btn sm", "去提交");
-    b.onclick = () => openHomeworkForm(cid, hw, actions);
-    actions.appendChild(b);
-  };
-  actions.appendChild(ta);
-  actions.appendChild(ok);
-  actions.appendChild(cancel);
-  ta.focus();
 }
 
 function renderHomeworkPanel(panel, c) {
@@ -929,7 +937,7 @@ function renderHomeworkPanel(panel, c) {
       actions.appendChild(el("span", "badge ok", "已提交 ✓"));
     } else {
       const b = el("button", "btn sm", "去提交");
-      b.onclick = () => openHomeworkForm(c.id, hw, actions);
+      b.onclick = () => openHomeworkForm(c.id, hw, row);
       actions.appendChild(b);
     }
     row.appendChild(info); row.appendChild(actions);
@@ -951,7 +959,7 @@ function renderHomeworkPanel(panel, c) {
         actions.appendChild(el("span", "badge ok", "已提交 ✓"));
       } else {
         const b = el("button", "btn sm", "去提交");
-        b.onclick = () => openHomeworkForm(c.id, hw, actions);
+        b.onclick = () => openHomeworkForm(c.id, hw, row);
         actions.appendChild(b);
       }
     });

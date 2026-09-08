@@ -529,7 +529,7 @@ function navigate(key, opts) {
   pages[key].style.display = "block";
   // 数据页每次进入都重新读取本地记录，保证学情/进度/签到实时同步
   if (key === "home") renderHome(pages[key]);
-  else if (key === "dashboard") renderDashboard(pages[key]);
+  else if (key === "dashboard") { HW_STATES_LOADED = false; renderDashboard(pages[key]); }
   else if (key === "signin") renderSignin(pages[key]);
   else if (key === "chat") renderChat(pages[key]);
   else if (key === "groups") renderGroups(pages[key]);

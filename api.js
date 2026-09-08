@@ -24,15 +24,19 @@ function clearToken() { try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
 // 统一请求封装：自动带 JWT、解析 JSON、统一抛错。
 async function apiFetch(path, opts) {
   opts = opts || {};
-  const headers = { "Content-Type": "application/json" };
+  const headers = {};
   const tk = getToken();
   if (tk) headers["Authorization"] = "Bearer " + tk;
+  // 文件上传走 multipart/form-data：不手动设 Content-Type（让浏览器自动带 boundary），
+  // 且 body 直接传 FormData，不做 JSON.stringify。
+  const isForm = !!(opts && opts.isForm && opts.body instanceof FormData);
+  if (!isForm) headers["Content-Type"] = "application/json";
   let res;
   try {
     res = await fetch(API_BASE + path, {
       method: opts.method || "GET",
       headers: headers,
-      body: opts.body ? JSON.stringify(opts.body) : undefined,
+      body: isForm ? opts.body : (opts.body ? JSON.stringify(opts.body) : undefined),
       // 关页/切后台时补报需要：允许请求在页面卸载后继续发送（且能带 JWT 鉴权头，
       // 这是 sendBeacon 做不到的）。仅上报类接口显式开启。
       keepalive: opts.keepalive === true,
@@ -70,6 +74,14 @@ const API = {
   getHomeworks: (cid) => apiFetch("/api/courses/" + cid + "/homeworks"),
   submitHomework: (homework_id, answer) =>
     apiFetch("/api/homeworks/submit", { method: "POST", body: { homework_id, answer } }),
+  // 带附件提交：用 FormData 上传文件（isForm 标记让 apiFetch 走 multipart）
+  submitHomeworkWithFile: (homework_id, answer, file) => {
+    const fd = new FormData();
+    fd.append("homework_id", homework_id);
+    fd.append("answer", answer || "");
+    if (file) fd.append("file", file);
+    return apiFetch("/api/homeworks/submit-file", { method: "POST", body: fd, isForm: true });
+  },
 
   // 课程详情（含 ai_classroom_url：已生成的 AI 课堂链接，全班复用不耗额度）
   getCourseDetail: (cid) => apiFetch("/api/courses/" + cid),

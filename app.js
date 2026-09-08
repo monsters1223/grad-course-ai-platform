@@ -878,6 +878,14 @@ function openHomeworkForm(cid, hw, row) {
   ta.rows = 3;
   ta.placeholder = "请输入作业内容…";
   ta.style.cssText = "width:100%;box-sizing:border-box;margin-bottom:10px;padding:10px 12px;border:1px solid var(--border-2);border-radius:10px;font-size:13px;font-family:inherit;resize:vertical";
+  const fileInput = document.createElement("input");
+  fileInput.type = "file";
+  fileInput.style.cssText = "display:block;margin-bottom:6px;font-size:13px";
+  const fileTip = el("div", "muted", "");
+  fileTip.style.cssText = "font-size:12px;margin-bottom:10px;color:var(--muted)";
+  fileInput.onchange = () => {
+    fileTip.textContent = fileInput.files.length ? "已选择：" + fileInput.files[0].name : "";
+  };
   const bar = el("div");
   bar.style.cssText = "display:flex;gap:8px;justify-content:flex-end";
   const ok = el("button", "btn sm", "提交作业");
@@ -885,27 +893,31 @@ function openHomeworkForm(cid, hw, row) {
   bar.appendChild(ok);
   bar.appendChild(cancel);
   form.appendChild(ta);
+  form.appendChild(fileInput);
+  form.appendChild(fileTip);
   form.appendChild(bar);
   row.after(form);
   ta.focus();
   cancel.onclick = () => form.remove();
   ok.onclick = async () => {
     const answer = ta.value.trim();
-    if (!answer) { toast("请先填写作业内容"); return; }
+    const file = fileInput.files.length ? fileInput.files[0] : null;
+    if (!answer && !file) { toast("请填写作业内容或选择文件后再提交"); return; }
     ok.disabled = true;
     try {
       const hws = await API.getHomeworks(cid);
       const real = (hws || []).find((h) => h.title === hw.title);
       if (!real) { toast("未找到对应作业：「" + hw.title + "」"); ok.disabled = false; return; }
-      await API.submitHomework(real.id, answer);
-      toast("已提交作业：「" + hw.title + "」");
+      const res = await API.submitHomeworkWithFile(real.id, answer, file);
+      toast("已提交作业：「" + hw.title + "」" + (res && res.file_name ? "（含附件 " + res.file_name + "）" : ""));
       HW_STATES_LOADED = false;
       await loadHWStates();
       if (pages.dashboard) renderDashboard(pages.dashboard);
       form.remove();
       if (actions) {
         actions.innerHTML = "";
-        actions.appendChild(el("span", "badge ok", "已提交 ✓"));
+        const label = (res && res.file_name) ? "已提交 ✓ · 含附件" : "已提交 ✓";
+        actions.appendChild(el("span", "badge ok", label));
       }
     } catch (e) {
       toast(e.message || "提交失败");
@@ -1415,7 +1427,7 @@ async function loadHWStates() {
     try {
       const hws = await API.getHomeworks(c.id);
       const m = {};
-      (hws || []).forEach((h) => { m[h.title] = { submitted: !!h.submitted, id: h.id }; });
+      (hws || []).forEach((h) => { m[h.title] = { submitted: !!h.submitted, id: h.id, file_name: h.file_name }; });
       HW_STATES[c.id] = m;
     } catch (e) {}
   }
@@ -1504,7 +1516,8 @@ function renderDashboard(v) {
     const hwState = HW_STATES[c.id] || {};
     (c.homeworks || []).forEach((hw) => {
       if (hwState[hw.title] && hwState[hw.title].submitted) {
-        tasks.push({ type: "hw-done", text: "已提交作业：「" + hw.title + "」", cid: c.id, hwTitle: hw.title });
+        const fn = hwState[hw.title].file_name;
+        tasks.push({ type: "hw-done", text: "已提交作业：「" + hw.title + "」" + (fn ? "（含附件 " + fn + "）" : ""), cid: c.id, hwTitle: hw.title });
       } else {
         tasks.push({ type: "hw", text: "待提交作业：「" + hw.title + "」" + (hw.due ? "（截止 " + hw.due + "）" : ""), cid: c.id, hwTitle: hw.title });
       }

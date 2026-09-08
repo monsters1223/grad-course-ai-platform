@@ -88,6 +88,8 @@ const API = {
   // 学习小组（与后端 routers/groups.py 对应）
   getGroups: () => apiFetch("/api/groups"),
   joinGroup: (gid) => apiFetch("/api/groups/" + gid + "/join", { method: "POST" }),
+  // 群聊历史消息（后端留存，进入群聊时拉取）
+  getRoomMessages: (rid) => apiFetch("/api/rooms/" + rid + "/messages"),
 
   // 学情上报（阶段二：真实化，落到 study_logs / quiz_results）
   reportVideo: (course_id, section_index, section_title, progress, watch_seconds) =>

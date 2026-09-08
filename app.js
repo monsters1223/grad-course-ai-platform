@@ -867,6 +867,45 @@ function renderLearn(v, c, targetTab) {
 }
 
 /* ---------------- 课程作业（已接入后端 homeworks 状态） ---------------- */
+// 点击「去提交」展开内联输入框，填写内容后提交（后端 /api/homeworks/submit 支持 answer 字段）
+function openHomeworkForm(cid, hw, actions) {
+  actions.innerHTML = "";
+  const ta = document.createElement("textarea");
+  ta.rows = 3;
+  ta.placeholder = "请输入作业内容…";
+  ta.style.cssText = "width:300px;display:block;margin-bottom:8px;padding:9px 12px;border:1px solid var(--border-2);border-radius:10px;font-size:13px;font-family:inherit;resize:vertical";
+  const ok = el("button", "btn sm", "提交作业");
+  const cancel = el("button", "btn sm", "取消");
+  cancel.style.marginLeft = "8px";
+  ok.onclick = async () => {
+    const answer = ta.value.trim();
+    if (!answer) { toast("请先填写作业内容"); return; }
+    ok.disabled = true;
+    try {
+      await API.submitHomework(hw.id, answer);
+      toast("已提交作业：「" + hw.title + "」");
+      HW_STATES_LOADED = false;
+      await loadHWStates();
+      if (pages.dashboard) renderDashboard(pages.dashboard);
+      actions.innerHTML = "";
+      actions.appendChild(el("span", "badge ok", "已提交 ✓"));
+    } catch (e) {
+      toast(e.message || "提交失败");
+      ok.disabled = false;
+    }
+  };
+  cancel.onclick = () => {
+    actions.innerHTML = "";
+    const b = el("button", "btn sm", "去提交");
+    b.onclick = () => openHomeworkForm(cid, hw, actions);
+    actions.appendChild(b);
+  };
+  actions.appendChild(ta);
+  actions.appendChild(ok);
+  actions.appendChild(cancel);
+  ta.focus();
+}
+
 function renderHomeworkPanel(panel, c) {
   panel.innerHTML = "";
   panel.appendChild(el("h3", null, "课程作业"));
@@ -890,7 +929,7 @@ function renderHomeworkPanel(panel, c) {
       actions.appendChild(el("span", "badge ok", "已提交 ✓"));
     } else {
       const b = el("button", "btn sm", "去提交");
-      b.onclick = () => markHomework(c.id, hw.title);
+      b.onclick = () => openHomeworkForm(c.id, hw, actions);
       actions.appendChild(b);
     }
     row.appendChild(info); row.appendChild(actions);
@@ -912,7 +951,7 @@ function renderHomeworkPanel(panel, c) {
         actions.appendChild(el("span", "badge ok", "已提交 ✓"));
       } else {
         const b = el("button", "btn sm", "去提交");
-        b.onclick = () => markHomework(c.id, hw.title);
+        b.onclick = () => openHomeworkForm(c.id, hw, actions);
         actions.appendChild(b);
       }
     });
@@ -1095,7 +1134,8 @@ async function renderDiscussion(panel, c) {
     lsSet(collapseKey, collapsed);
   }
 
-  function paint(list) {
+  function paint(rawList) {
+    const list = (rawList || []).slice().reverse();  // 后端按时间倒序返回，反转为正序（旧在上、新在下，楼层号按时间递增）
     msgs.innerHTML = "";
     if (!list.length) msgs.appendChild(el("div", "muted", "还没有讨论，来发第一条吧～"));
     let floor = 0;
@@ -1546,11 +1586,14 @@ function renderDashboard(v) {
 // 作业提交（已接入后端：提交到 /api/homeworks/submit，状态从后端读取）
 async function markHomework(cid, title) {
   if (!title) return;
+  const answer = prompt("请输入作业内容：", "");
+  if (answer === null) return;
+  if (!answer.trim()) { toast("作业内容不能为空"); return; }
   try {
     const hws = await API.getHomeworks(cid);
     const hw = (hws || []).find((h) => h.title === title);
     if (!hw) { toast("未找到对应作业：「" + title + "」"); return; }
-    await API.submitHomework(hw.id, "");
+    await API.submitHomework(hw.id, answer);
     toast("已提交作业：「" + title + "」");
     HW_STATES_LOADED = false;  // 重置标志，让看板下次渲染时重新拉取作业状态
     await loadHWStates();
@@ -1646,7 +1689,15 @@ function renderChat(v) {
     msgs.scrollTop = msgs.scrollHeight;
   }
 
-  appendMsg({ user: "系统", content: "已连接到班级群聊，开始实时收发消息（历史消息由后端留存）" }, false);
+  appendMsg({ user: "系统", content: "已连接到班级群聊，正在加载历史消息…" }, false);
+
+  // 拉取后端留存的历史消息（GET /api/rooms/{rid}/messages），再建立 WebSocket 收实时消息
+  API.getRoomMessages(CHAT_ROOM_ID).then((list) => {
+    (list || []).forEach((m) => {
+      appendMsg(m, !!(currentUser && m.user === currentUser.name));
+    });
+    msgs.scrollTop = msgs.scrollHeight;
+  }).catch(() => {});
 
   if (chatWs) { try { chatWs.close(); } catch (e) {} }
   function connect() {

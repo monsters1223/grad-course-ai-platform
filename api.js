@@ -33,6 +33,9 @@ async function apiFetch(path, opts) {
       method: opts.method || "GET",
       headers: headers,
       body: opts.body ? JSON.stringify(opts.body) : undefined,
+      // 关页/切后台时补报需要：允许请求在页面卸载后继续发送（且能带 JWT 鉴权头，
+      // 这是 sendBeacon 做不到的）。仅上报类接口显式开启。
+      keepalive: opts.keepalive === true,
     });
   } catch (e) {
     throw new Error("网络异常，无法连接后端（" + (API_BASE) + "）");
@@ -88,9 +91,9 @@ const API = {
 
   // 学情上报（阶段二：真实化，落到 study_logs / quiz_results）
   reportVideo: (course_id, section_index, section_title, progress, watch_seconds) =>
-    apiFetch("/api/progress/video", { method: "POST", body: { course_id, section_index, section_title, progress, watch_seconds } }),
+    apiFetch("/api/progress/video", { method: "POST", body: { course_id, section_index, section_title, progress, watch_seconds }, keepalive: true }),
   reportQuiz: (course_id, quiz_index, quiz_title, score, total) =>
-    apiFetch("/api/progress/quiz", { method: "POST", body: { course_id, quiz_index, quiz_title, score, total } }),
+    apiFetch("/api/progress/quiz", { method: "POST", body: { course_id, quiz_index, quiz_title, score, total }, keepalive: true }),
 
   // 学情看板（真实聚合，来自后端）
   getDashboard: () => apiFetch("/api/dashboard"),

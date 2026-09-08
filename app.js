@@ -1244,7 +1244,7 @@ function renderAIChat(v) {
     btn.disabled = false;
     btn.onclick = startGenerate;
     h3.textContent = "该课程尚未创建 AI 课堂";
-    pdesc.textContent = msg || "点击下方按钮，由 OpenMAIC 多智能体生成专属互动课堂（约 1–3 分钟）";
+    pdesc.textContent = msg || "点击下方按钮，由 OpenMAIC 多智能体生成专属互动课堂（约 1–10 分钟）";
     setTip(tipMsg || "", "#A32D2D");
   }
 
@@ -1257,6 +1257,8 @@ function renderAIChat(v) {
     let hint = msg;
     if (/额度|403/.test(msg)) {
       hint = "OpenMAIC 今日生成额度已用完（每码每日 10 次）。课堂按课程复用，通常只有首次创建才消耗额度，请明天再试或联系管理员。";
+    } else if (/无效|401/.test(msg)) {
+      hint = "OpenMAIC 访问码无效，请联系管理员核对 .env 中的 OPENMAIC_ACCESS_CODE。";
     } else if (/访问码|501/.test(msg)) {
       hint = "后端未配置 OpenMAIC 访问码，请联系管理员在 .env 中设置 OPENMAIC_ACCESS_CODE。";
     }
@@ -1292,11 +1294,20 @@ function renderAIChat(v) {
     btn.disabled = true;
     btn.textContent = "生成中…";
     h3.textContent = "AI 正在生成课堂";
-    pdesc.textContent = "OpenMAIC 多智能体正在备课，通常需要 1–3 分钟，请保持页面打开";
+    pdesc.textContent = "OpenMAIC 多智能体正在备课，通常需要 1–10 分钟，请保持页面打开";
     const t0 = Date.now();
     setTip("已用时 0 秒");
     try {
       const g = await API.generateAIClassroom(cid);
+      // 幂等复用：后端若已存在该课程的课堂 URL，会直接返回 reused，
+      // 此时无需轮询、也不消耗 OpenMAIC 额度
+      if (g && g.reused && g.url) {
+        AI_URL_CACHE[cid] = g.url;
+        AI_BUSY = false;
+        setReady(g.url, false);
+        toast("已复用已有 AI 课堂，未消耗生成额度");
+        return;
+      }
       const jobId = g && g.jobId;
       if (!jobId) throw new Error("后端未返回 jobId");
       const DONE = ["succeeded", "completed", "done"];
@@ -1318,9 +1329,9 @@ function renderAIChat(v) {
             onGenFail("生成任务失败，请稍后重试");
             return;
           }
-          if (tries >= 60) {
+          if (tries >= 120) {
             clearInterval(AI_POLL); AI_POLL = null; AI_BUSY = false;
-            onGenFail("生成超时（超过 5 分钟），请稍后重试");
+            onGenFail("生成超时（超过 10 分钟），请稍后重试");
           }
         } catch (pe) {
           clearInterval(AI_POLL); AI_POLL = null; AI_BUSY = false;
